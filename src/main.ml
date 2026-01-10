@@ -1,3 +1,5 @@
+open Stdlib
+
 let () =
   if Array.length Sys.argv < 3 then (
     Printf.eprintf "Usage: ./your_program.sh tokenize <filename>\n";
@@ -18,7 +20,6 @@ let () =
   if String.length file_contents > 0 then
     (* Implement & use your scanner here *)
     failwith "Scanner not implemented"
-  else
-    (* TODO: Uncomment the code below to pass the first stage *)
-    (* print_endline "EOF  null"; (* Placeholder, replace this line when implementing the scanner *) *)
-    ()
+  else print_endline "EOF  null";
+  (* Placeholder, replace this line when implementing the scanner *)
+  ()
