@@ -20,7 +20,7 @@ let token_name (x : token) : string =
   | Eof -> "EOF"
 
 let lexeme_for_token (x : token) : string =
-  match x with LeftParen -> "(" | RightParen -> ")" | Eof -> " "
+  match x with LeftParen -> "(" | RightParen -> ")" | Eof -> ""
 
 let print_tokens (tokens : token list) =
   List.map
