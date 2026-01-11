@@ -73,8 +73,8 @@ let rec parse_rec (chars : char list) (acc : token_result_t list) (line : int) :
       | _ as v ->
           parse_rec rest
             (Error
-               (Stdlib.Printf.sprintf "[line %d] Error: Unexpected character %c"
-                  line v)
+               (Stdlib.Printf.sprintf
+                  "[line %d] Error: Unexpected character: %c" line v)
             :: acc)
             line)
 
