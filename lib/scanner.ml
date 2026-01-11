@@ -21,7 +21,7 @@ type token_type =
   | EQUAL
   | EQUAL_EQUAL
   | STRING of string
-  | NUMBER of string
+  | NUMBER of float
   | EOF
 
 type t = { token_type : token_type; lexeme : string }
@@ -37,7 +37,7 @@ let rec skip_comment chars =
 
 let number_token_of_chars chars =
   let str = chars |> List.rev |> String.of_char_list in
-  { token_type = NUMBER str; lexeme = str }
+  { token_type = NUMBER (Float.of_string str); lexeme = str }
 
 let rec consume_number (chars : char list) (num_chars : char list) :
     char list * token_result_t =
@@ -173,9 +173,11 @@ let literal token_type =
   match token_type with
   | STRING value -> Some value
   | NUMBER value -> (
-      match String.index value '.' with
-      | Some _ -> Some (String.rstrip ~drop:(fun ch -> Char.(ch = '0')) value)
-      | None -> Some (Stdlib.Printf.sprintf "%.1f" (Float.of_string value)))
+      let value = Float.to_string value in
+      let value = String.rstrip ~drop:(fun ch -> Char.(ch = '0')) value in
+      match Stdlib.String.ends_with ~suffix:"." value with
+      | true -> Some (String.append value "0")
+      | false -> Some value)
   | _ -> None
 
 let t_to_string token =
