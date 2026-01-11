@@ -47,10 +47,10 @@ let rec parse_rec (chars : char list) (acc : token_result_t list) (line : int) :
       parse_rec rest (Ok { token_type = LESS; lexeme = "=" } :: acc) line
   | '>' :: '=' :: rest ->
       parse_rec rest
-        (Ok { token_type = GREATER_EQUAL; lexeme = "<=" } :: acc)
+        (Ok { token_type = GREATER_EQUAL; lexeme = ">=" } :: acc)
         line
   | '>' :: rest ->
-      parse_rec rest (Ok { token_type = GREATER; lexeme = "=" } :: acc) line
+      parse_rec rest (Ok { token_type = GREATER; lexeme = ">" } :: acc) line
   | '(' :: rest ->
       parse_rec rest (Ok { token_type = LEFT_PAREN; lexeme = "(" } :: acc) line
   | ')' :: rest ->
