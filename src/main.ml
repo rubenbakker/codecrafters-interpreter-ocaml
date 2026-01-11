@@ -15,6 +15,9 @@ let () =
   let file_contents = In_channel.with_open_text filename In_channel.input_all in
 
   let open Lib.Scanner in
-  char_list_of_string file_contents |> parse |> print_tokens;
-
+  let token_results = char_list_of_string file_contents |> parse in
+  token_results |> get_errors
+  |> List.map ~f:(fun error -> Stdlib.print_endline error)
+  |> ignore;
+  token_results |> get_tokens |> print_tokens;
   Stdlib.flush Stdlib.stdout
