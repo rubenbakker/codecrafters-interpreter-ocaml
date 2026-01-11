@@ -8,6 +8,9 @@ type token_type =
   | MINUS
   | STAR
   | COMMA
+  | DOT
+  | SEMICOLON
+  | SLASH
   | PLUS
   | EOF
 
@@ -44,6 +47,18 @@ let rec parse_rec (chars : char list) (acc : t list) (line : int) : t list =
           parse_rec rest
             ({ token_type = COMMA; lexeme = String.of_char v } :: acc)
             line
+      | '.' as v ->
+          parse_rec rest
+            ({ token_type = DOT; lexeme = String.of_char v } :: acc)
+            line
+      | ';' as v ->
+          parse_rec rest
+            ({ token_type = SEMICOLON; lexeme = String.of_char v } :: acc)
+            line
+      | '/' as v ->
+          parse_rec rest
+            ({ token_type = SLASH; lexeme = String.of_char v } :: acc)
+            line
       | '+' as v ->
           parse_rec rest
             ({ token_type = PLUS; lexeme = String.of_char v } :: acc)
@@ -63,6 +78,9 @@ let token_name (x : token_type) : string =
   | COMMA -> "COMMA"
   | PLUS -> "PLUS"
   | MINUS -> "MINUS"
+  | DOT -> "DOT"
+  | SEMICOLON -> "SEMICOLON"
+  | SLASH -> "SLASH"
   | LEFT_PAREN -> "LEFT_PAREN"
   | RIGHT_PAREN -> "RIGHT_PAREN"
   | LEFT_BRACE -> "LEFT_BRACE"
