@@ -12,8 +12,8 @@ let rec parse_rec (chars : char list) (acc : token_type list) : token_type list
       match char with
       | '(' -> parse_rec rest (LEFT_PAREN :: acc)
       | ')' -> parse_rec rest (RIGHT_PAREN :: acc)
-      | '{' -> parse_rec rest (LEFT_PAREN :: acc)
-      | '}' -> parse_rec rest (RIGHT_PAREN :: acc)
+      | '{' -> parse_rec rest (LEFT_BRACE :: acc)
+      | '}' -> parse_rec rest (RIGHT_BRACE :: acc)
       | _ -> parse_rec rest acc)
 
 let parse (chars : char list) : token_type list = parse_rec chars [] |> List.rev
