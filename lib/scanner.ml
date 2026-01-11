@@ -37,7 +37,6 @@ let rec skip_comment chars =
 
 let number_token_of_chars chars =
   let str = chars |> List.rev |> String.of_char_list in
-  let number = Float.of_string str in
   { token_type = NUMBER str; lexeme = str }
 
 let rec consume_number (chars : char list) (num_chars : char list) :
