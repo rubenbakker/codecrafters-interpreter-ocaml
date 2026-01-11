@@ -2,6 +2,8 @@ open Base
 
 type token_type = LEFT_PAREN | RIGHT_PAREN | LEFT_BRACE | RIGHT_BRACE | EOF
 
+let char_list_of_string str = List.init (String.length str) ~f:(String.get str)
+
 let rec parse_rec (chars : char list) (acc : token_type list) : token_type list
     =
   match chars with
