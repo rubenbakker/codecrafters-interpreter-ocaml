@@ -9,5 +9,7 @@
 set -e # Exit on failure
 
 env
+opam list
 opam install base
+opam list
 dune build --build-dir /tmp/codecrafters-build-interpreter-ocaml
