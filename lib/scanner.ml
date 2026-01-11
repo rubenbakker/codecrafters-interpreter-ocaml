@@ -10,10 +10,18 @@ let rec parse_rec (chars : char list) (acc : t list) : t list =
   | [] -> { type_ = EOF; lexeme = "" } :: acc
   | char :: rest -> (
       match char with
-      | '(' -> parse_rec rest ({ type_ = LEFT_PAREN; lexeme = "(" } :: acc)
-      | ')' -> parse_rec rest ({ type_ = RIGHT_PAREN; lexeme = ")" } :: acc)
-      | '{' -> parse_rec rest ({ type_ = LEFT_BRACE; lexeme = "{" } :: acc)
-      | '}' -> parse_rec rest ({ type_ = RIGHT_BRACE; lexeme = "}" } :: acc)
+      | '(' as v ->
+          parse_rec rest
+            ({ type_ = LEFT_PAREN; lexeme = String.of_char v } :: acc)
+      | ')' as v ->
+          parse_rec rest
+            ({ type_ = RIGHT_PAREN; lexeme = String.of_char v } :: acc)
+      | '{' as v ->
+          parse_rec rest
+            ({ type_ = LEFT_BRACE; lexeme = String.of_char v } :: acc)
+      | '}' as v ->
+          parse_rec rest
+            ({ type_ = RIGHT_BRACE; lexeme = String.of_char v } :: acc)
       | _ -> parse_rec rest acc)
 
 let parse (chars : char list) : t list = parse_rec chars [] |> List.rev
@@ -27,7 +35,7 @@ let token_name (x : token_type) : string =
   | EOF -> "EOF"
 
 let t_to_string token =
-  Stdlib.Printf.sprintf "%s %s null\n" (token_name token.type_) token.lexeme
+  Stdlib.Printf.sprintf "%s %s null" (token_name token.type_) token.lexeme
 
 let print_tokens (tokens : t list) =
   List.map ~f:(fun token -> Stdlib.print_endline (t_to_string token)) tokens
