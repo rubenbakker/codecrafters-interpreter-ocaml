@@ -1,26 +1,28 @@
 open Base
 
-type token = LeftParen | RightParen | Eof
+type token = LEFT_PAREN | RIGHT_PAREN | EOF
 
 let char_list_of_string str = List.init (String.length str) ~f:(String.get str)
 
-let rec parse (chars : char list) : token list =
+let rec parse_rec (chars : char list) (acc : token list) : token list =
   match chars with
-  | [] -> [ Eof ]
+  | [] -> EOF :: acc
   | char :: rest -> (
       match char with
-      | '(' -> LeftParen :: parse rest
-      | ')' -> RightParen :: parse rest
-      | _ -> parse rest)
+      | '(' -> parse_rec rest (LEFT_PAREN :: acc)
+      | ')' -> parse_rec rest (RIGHT_PAREN :: acc)
+      | _ -> parse_rec rest acc)
+
+let parse (chars : char list) : token list = parse_rec chars []
 
 let token_name (x : token) : string =
   match x with
-  | LeftParen -> "LEFT_PAREN"
-  | RightParen -> "RIGHT_PAREN"
-  | Eof -> "EOF"
+  | LEFT_PAREN -> "LEFT_PAREN"
+  | RIGHT_PAREN -> "RIGHT_PAREN"
+  | EOF -> "EOF"
 
 let lexeme_for_token (x : token) : string =
-  match x with LeftParen -> "(" | RightParen -> ")" | Eof -> ""
+  match x with LEFT_PAREN -> "(" | RIGHT_PAREN -> ")" | EOF -> ""
 
 let print_tokens (tokens : token list) =
   List.map
