@@ -13,7 +13,7 @@ let rec parse_rec (chars : char list) (acc : token list) : token list =
       | ')' -> parse_rec rest (RIGHT_PAREN :: acc)
       | _ -> parse_rec rest acc)
 
-let parse (chars : char list) : token list = parse_rec chars []
+let parse (chars : char list) : token list = parse_rec chars [] |> List.rev
 
 let token_name (x : token) : string =
   match x with
