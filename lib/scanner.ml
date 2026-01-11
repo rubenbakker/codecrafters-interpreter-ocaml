@@ -20,6 +20,7 @@ type token_type =
   | PLUS
   | EQUAL
   | EQUAL_EQUAL
+  | STRING of string
   | EOF
 
 type t = { token_type : token_type; lexeme : string }
@@ -33,10 +34,26 @@ let rec skip_comment chars =
   | '\n' :: rest -> rest
   | _ :: rest -> skip_comment rest
 
+let rec consume_string chars str line =
+  match chars with
+  | [] ->
+      ( chars,
+        Error
+          (Stdlib.Printf.sprintf "[line %d] Error: Unterminated string." line),
+        line )
+  | '\"' :: rest ->
+      let str = '\"' :: str |> List.rev |> String.of_char_list in
+      (rest, Ok { token_type = STRING str; lexeme = str }, line)
+  | '\n' :: rest -> consume_string rest ('\n' :: str) (line + 1)
+  | (_ as v) :: rest -> consume_string rest (v :: str) line
+
 let rec parse_rec (chars : char list) (acc : token_result_t list) (line : int) :
     token_result_t list =
   match chars with
   | [] -> Ok { token_type = EOF; lexeme = "" } :: acc
+  | '\"' :: rest ->
+      let rest, string_token_result, line = consume_string rest [ '\"' ] line in
+      parse_rec rest (string_token_result :: acc) line
   | '!' :: '=' :: rest ->
       parse_rec rest (Ok { token_type = BANG_EQUAL; lexeme = "!=" } :: acc) line
   | '!' :: rest ->
@@ -106,6 +123,7 @@ let get_tokens (tokens : token_result_t list) : t list =
 
 let token_name (x : token_type) : string =
   match x with
+  | STRING _ -> "STRING"
   | BANG -> "BANG"
   | BANG_EQUAL -> "BANG_EQUAL"
   | LESS -> "LESS"
@@ -127,8 +145,16 @@ let token_name (x : token_type) : string =
   | EQUAL_EQUAL -> "EQUAL_EQUAL"
   | EOF -> "EOF"
 
+let literal token_type =
+  match token_type with STRING value -> Some value | _ -> None
+
 let t_to_string token =
-  Stdlib.Printf.sprintf "%s %s null" (token_name token.token_type) token.lexeme
+  let literal_value =
+    match literal token.token_type with Some value -> value | None -> "null"
+  in
+  Stdlib.Printf.sprintf "%s %s %s"
+    (token_name token.token_type)
+    token.lexeme literal_value
 
 let print_tokens (tokens : t list) =
   List.map ~f:(fun token -> Stdlib.print_endline (t_to_string token)) tokens
