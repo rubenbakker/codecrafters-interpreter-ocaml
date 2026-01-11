@@ -27,6 +27,12 @@ type token_result_t = (t, string) Result.t
 
 let char_list_of_string str = List.init (String.length str) ~f:(String.get str)
 
+let rec skip_comment chars =
+  match chars with
+  | [] -> chars
+  | '\n' :: rest -> rest
+  | _ :: rest -> skip_comment rest
+
 let rec parse_rec (chars : char list) (acc : token_result_t list) (line : int) :
     token_result_t list =
   match chars with
@@ -51,6 +57,9 @@ let rec parse_rec (chars : char list) (acc : token_result_t list) (line : int) :
         line
   | '>' :: rest ->
       parse_rec rest (Ok { token_type = GREATER; lexeme = ">" } :: acc) line
+  | '/' :: '/' :: rest -> parse_rec (skip_comment rest) acc line
+  | '/' :: rest ->
+      parse_rec rest (Ok { token_type = SLASH; lexeme = "/" } :: acc) line
   | '(' :: rest ->
       parse_rec rest (Ok { token_type = LEFT_PAREN; lexeme = "(" } :: acc) line
   | ')' :: rest ->
@@ -67,8 +76,6 @@ let rec parse_rec (chars : char list) (acc : token_result_t list) (line : int) :
       parse_rec rest (Ok { token_type = DOT; lexeme = "." } :: acc) line
   | ';' :: rest ->
       parse_rec rest (Ok { token_type = SEMICOLON; lexeme = ";" } :: acc) line
-  | '/' :: rest ->
-      parse_rec rest (Ok { token_type = SLASH; lexeme = "/" } :: acc) line
   | '+' :: rest ->
       parse_rec rest (Ok { token_type = PLUS; lexeme = "+" } :: acc) line
   | '-' :: rest ->
