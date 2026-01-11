@@ -174,7 +174,7 @@ let literal token_type =
   | STRING value -> Some value
   | NUMBER value -> (
       match String.index value '.' with
-      | Some _ -> Some value
+      | Some _ -> Some (String.rstrip ~drop:(fun ch -> Char.(ch = '0')) value)
       | None -> Some (Stdlib.Printf.sprintf "%.1f" (Float.of_string value)))
   | _ -> None
 
