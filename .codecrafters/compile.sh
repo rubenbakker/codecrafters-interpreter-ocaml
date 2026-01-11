@@ -12,8 +12,10 @@ env
 echo ">>> before"
 opam list
 echo ">>> install"
-opam install ocaml_intrinsics_kernel sexplib0 base
+opam install --locked ocaml_intrinsics_kernel sexplib0 base
 echo ">>> after"
 opam list
+touch /app/testx
+ls -la /app/testx
 echo ">>> compile"
 dune build --build-dir /tmp/codecrafters-build-interpreter-ocaml
