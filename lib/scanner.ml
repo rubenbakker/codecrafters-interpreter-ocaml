@@ -3,6 +3,10 @@ open Base
 type token_type =
   | BANG
   | BANG_EQUAL
+  | LESS
+  | LESS_EQUAL
+  | GREATER
+  | GREATER_EQUAL
   | LEFT_PAREN
   | RIGHT_PAREN
   | LEFT_BRACE
@@ -37,6 +41,16 @@ let rec parse_rec (chars : char list) (acc : token_result_t list) (line : int) :
         line
   | '=' :: rest ->
       parse_rec rest (Ok { token_type = EQUAL; lexeme = "=" } :: acc) line
+  | '<' :: '=' :: rest ->
+      parse_rec rest (Ok { token_type = LESS_EQUAL; lexeme = "<=" } :: acc) line
+  | '<' :: rest ->
+      parse_rec rest (Ok { token_type = LESS; lexeme = "=" } :: acc) line
+  | '>' :: '=' :: rest ->
+      parse_rec rest
+        (Ok { token_type = GREATER_EQUAL; lexeme = "<=" } :: acc)
+        line
+  | '>' :: rest ->
+      parse_rec rest (Ok { token_type = GREATER; lexeme = "=" } :: acc) line
   | '(' :: rest ->
       parse_rec rest (Ok { token_type = LEFT_PAREN; lexeme = "(" } :: acc) line
   | ')' :: rest ->
@@ -85,6 +99,10 @@ let token_name (x : token_type) : string =
   match x with
   | BANG -> "BANG"
   | BANG_EQUAL -> "BANG_EQUAL"
+  | LESS -> "LESS"
+  | LESS_EQUAL -> "LESS_EQUAL"
+  | GREATER -> "GREATER"
+  | GREATER_EQUAL -> "GREATER_EQUAL"
   | STAR -> "STAR"
   | COMMA -> "COMMA"
   | PLUS -> "PLUS"
