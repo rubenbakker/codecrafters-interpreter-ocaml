@@ -26,7 +26,9 @@ let rec parse_rec (chars : char list) (acc : token_result_t list) (line : int) :
   match chars with
   | [] -> Ok { token_type = EOF; lexeme = "" } :: acc
   | '=' :: '=' :: rest ->
-      parse_rec rest (Ok { token_type = LEFT_PAREN; lexeme = "==" } :: acc) line
+      parse_rec rest
+        (Ok { token_type = EQUAL_EQUAL; lexeme = "==" } :: acc)
+        line
   | char :: rest -> (
       match char with
       | '(' as v ->
