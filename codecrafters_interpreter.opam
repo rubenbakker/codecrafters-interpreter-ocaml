@@ -11,6 +11,7 @@ bug-reports:
 depends: [
   "dune" {>= "3.16"}
   "lwt"
+  "base"
   "odoc" {with-doc}
 ]
 build: [
