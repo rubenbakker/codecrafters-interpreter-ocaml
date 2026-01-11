@@ -17,8 +17,9 @@ let () =
   let open Lib.Scanner in
   let token_results = char_list_of_string file_contents |> parse in
   let errors = token_results |> get_errors in
-  errors |> List.map ~f:(fun error -> Stdlib.print_endline error) |> ignore;
+  errors |> List.map ~f:(fun error -> Stdlib.prerr_endline error) |> ignore;
   token_results |> get_tokens |> print_tokens;
+  Stdlib.flush Stdlib.stderr;
   Stdlib.flush Stdlib.stdout;
   let exit_code = match errors with [] -> 0 | _ -> 65 in
   Stdlib.exit exit_code
