@@ -57,7 +57,7 @@ let rec parse_rec (chars : char list) (acc : token_result_t list) (line : int) :
         line
   | '>' :: rest ->
       parse_rec rest (Ok { token_type = GREATER; lexeme = ">" } :: acc) line
-  | '/' :: '/' :: rest -> parse_rec (skip_comment rest) acc line
+  | '/' :: '/' :: rest -> parse_rec (skip_comment rest) acc (line + 1)
   | '/' :: rest ->
       parse_rec rest (Ok { token_type = SLASH; lexeme = "/" } :: acc) line
   | '(' :: rest ->
