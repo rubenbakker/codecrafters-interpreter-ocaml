@@ -21,6 +21,7 @@ type token_type =
   | EQUAL
   | EQUAL_EQUAL
   | STRING of string
+  | NUMBER of float
   | EOF
 
 type t = { token_type : token_type; lexeme : string }
@@ -33,6 +34,19 @@ let rec skip_comment chars =
   | [] -> chars
   | '\n' :: rest -> rest
   | _ :: rest -> skip_comment rest
+
+let number_token_of_chars chars =
+  let str = chars |> List.rev |> String.of_char_list in
+  let number = Float.of_string str in
+  { token_type = NUMBER number; lexeme = str }
+
+let rec consume_number (chars : char list) (num_chars : char list) :
+    char list * token_result_t =
+  match chars with
+  | [] -> (chars, Ok (number_token_of_chars num_chars))
+  | ('.' as v) :: rest -> consume_number rest (v :: num_chars)
+  | (_ as v) :: rest when Char.is_digit v -> consume_number rest (v :: num_chars)
+  | _ -> (chars, Ok (number_token_of_chars num_chars))
 
 let rec consume_string chars str line =
   match chars with
@@ -107,6 +121,9 @@ let rec parse_rec (chars : char list) (acc : token_result_t list) (line : int) :
   | '\n' :: rest -> parse_rec rest acc (line + 1)
   | '\t' :: rest -> parse_rec rest acc line
   | ' ' :: rest -> parse_rec rest acc line
+  | (_ as v) :: rest when Char.is_digit v ->
+      let rest, token_result = consume_number rest [ v ] in
+      parse_rec rest (token_result :: acc) line
   | (_ as v) :: rest ->
       parse_rec rest
         (Error
@@ -131,6 +148,7 @@ let get_tokens (tokens : token_result_t list) : t list =
 let token_name (x : token_type) : string =
   match x with
   | STRING _ -> "STRING"
+  | NUMBER _ -> "NUMBER"
   | BANG -> "BANG"
   | BANG_EQUAL -> "BANG_EQUAL"
   | LESS -> "LESS"
@@ -153,7 +171,10 @@ let token_name (x : token_type) : string =
   | EOF -> "EOF"
 
 let literal token_type =
-  match token_type with STRING value -> Some value | _ -> None
+  match token_type with
+  | STRING value -> Some value
+  | NUMBER value -> Some (Float.to_string_hum value)
+  | _ -> None
 
 let t_to_string token =
   let literal_value =
