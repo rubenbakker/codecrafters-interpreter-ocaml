@@ -10,6 +10,7 @@ set -e # Exit on failure
 
 env
 echo ">>> before"
+ls -la /app
 opam list
 echo ">>> install"
 opam install --locked ocaml_intrinsics_kernel sexplib0 base
