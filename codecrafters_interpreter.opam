@@ -12,6 +12,11 @@ depends: [
   "dune" {>= "3.16"}
   "lwt"
   "base"
+  "ppx_assert"
+  "ppx_inline_test"
+  "ppx_expect"
+  "ppx_sexp_conv"
+  "ppx_compare"
   "odoc" {with-doc}
 ]
 build: [

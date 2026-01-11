@@ -1,8 +1,8 @@
-open Stdlib
+open Base
 
 type token = LeftParen | RightParen | Eof
 
-let char_list_of_string str = List.init (String.length str) (String.get str)
+let char_list_of_string str = List.init (String.length str) ~f:(String.get str)
 
 let rec parse (chars : char list) : token list =
   match chars with
@@ -24,24 +24,25 @@ let lexeme_for_token (x : token) : string =
 
 let print_tokens (tokens : token list) =
   List.map
-    (fun token ->
-      Printf.printf "%s %s null\n" (token_name token) (lexeme_for_token token))
+    ~f:(fun token ->
+      Stdlib.Printf.printf "%s %s null\n" (token_name token)
+        (lexeme_for_token token))
     tokens
   |> ignore
 
 let () =
-  if Array.length Sys.argv < 3 then (
-    Printf.eprintf "Usage: ./your_program.sh tokenize <filename>\n";
-    exit 1);
+  if Array.length Stdlib.Sys.argv < 3 then (
+    Stdlib.Printf.eprintf "Usage: ./your_program.sh tokenize <filename>\n";
+    Stdlib.exit 1);
 
-  let command = Sys.argv.(1) in
-  let filename = Sys.argv.(2) in
+  let command = Stdlib.Sys.argv.(1) in
+  let filename = Stdlib.Sys.argv.(2) in
 
-  if command <> "tokenize" then (
-    Printf.eprintf "Unknown command: %s\n" command;
-    exit 1);
+  if String.(command <> "tokenize") then (
+    Stdlib.Printf.eprintf "Unknown command: %s\n" command;
+    Stdlib.exit 1);
 
   let file_contents = In_channel.with_open_text filename In_channel.input_all in
 
   char_list_of_string file_contents |> parse |> print_tokens;
-  flush stdout
+  Stdlib.flush Stdlib.stdout
