@@ -44,7 +44,7 @@ let rec parse_rec (chars : char list) (acc : token_result_t list) (line : int) :
   | '<' :: '=' :: rest ->
       parse_rec rest (Ok { token_type = LESS_EQUAL; lexeme = "<=" } :: acc) line
   | '<' :: rest ->
-      parse_rec rest (Ok { token_type = LESS; lexeme = "=" } :: acc) line
+      parse_rec rest (Ok { token_type = LESS; lexeme = "<" } :: acc) line
   | '>' :: '=' :: rest ->
       parse_rec rest
         (Ok { token_type = GREATER_EQUAL; lexeme = ">=" } :: acc)
