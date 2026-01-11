@@ -9,7 +9,11 @@
 set -e # Exit on failure
 
 env
+echo ">>> before"
 opam list
-opam install base
+echo ">>> install"
+opam install ocaml_intrinsics_kernel sexplib0 base
+echo ">>> after"
 opam list
+echo ">>> compile"
 dune build --build-dir /tmp/codecrafters-build-interpreter-ocaml
