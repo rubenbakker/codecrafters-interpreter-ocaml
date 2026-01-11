@@ -81,6 +81,8 @@ let rec parse_rec (chars : char list) (acc : token_result_t list) (line : int) :
   | '-' :: rest ->
       parse_rec rest (Ok { token_type = MINUS; lexeme = "-" } :: acc) line
   | '\n' :: rest -> parse_rec rest acc (line + 1)
+  | '\t' :: rest -> parse_rec rest acc line
+  | ' ' :: rest -> parse_rec rest acc line
   | (_ as v) :: rest ->
       parse_rec rest
         (Error
