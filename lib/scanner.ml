@@ -5,6 +5,7 @@ type token_type =
   | RIGHT_PAREN
   | LEFT_BRACE
   | RIGHT_BRACE
+  | MINUS
   | STAR
   | COMMA
   | PLUS
@@ -47,6 +48,10 @@ let rec parse_rec (chars : char list) (acc : t list) (line : int) : t list =
           parse_rec rest
             ({ token_type = PLUS; lexeme = String.of_char v } :: acc)
             line
+      | '-' as v ->
+          parse_rec rest
+            ({ token_type = MINUS; lexeme = String.of_char v } :: acc)
+            line
       | '\n' -> parse_rec rest acc (line + 1)
       | _ -> parse_rec rest acc line)
 
@@ -57,6 +62,7 @@ let token_name (x : token_type) : string =
   | STAR -> "STAR"
   | COMMA -> "COMMA"
   | PLUS -> "PLUS"
+  | MINUS -> "MINUS"
   | LEFT_PAREN -> "LEFT_PAREN"
   | RIGHT_PAREN -> "RIGHT_PAREN"
   | LEFT_BRACE -> "LEFT_BRACE"
