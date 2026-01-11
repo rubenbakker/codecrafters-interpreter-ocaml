@@ -173,7 +173,7 @@ let token_name (x : token_type) : string =
 let literal token_type =
   match token_type with
   | STRING value -> Some value
-  | NUMBER value -> Some (Stdlib.Printf.sprintf "%f.0" value)
+  | NUMBER value -> Some (Stdlib.Printf.sprintf "%.1f" value)
   | _ -> None
 
 let t_to_string token =
