@@ -29,64 +29,38 @@ let rec parse_rec (chars : char list) (acc : token_result_t list) (line : int) :
       parse_rec rest
         (Ok { token_type = EQUAL_EQUAL; lexeme = "==" } :: acc)
         line
-  | char :: rest -> (
-      match char with
-      | '(' as v ->
-          parse_rec rest
-            (Ok { token_type = LEFT_PAREN; lexeme = String.of_char v } :: acc)
-            line
-      | ')' as v ->
-          parse_rec rest
-            (Ok { token_type = RIGHT_PAREN; lexeme = String.of_char v } :: acc)
-            line
-      | '{' as v ->
-          parse_rec rest
-            (Ok { token_type = LEFT_BRACE; lexeme = String.of_char v } :: acc)
-            line
-      | '}' as v ->
-          parse_rec rest
-            (Ok { token_type = RIGHT_BRACE; lexeme = String.of_char v } :: acc)
-            line
-      | '*' as v ->
-          parse_rec rest
-            (Ok { token_type = STAR; lexeme = String.of_char v } :: acc)
-            line
-      | ',' as v ->
-          parse_rec rest
-            (Ok { token_type = COMMA; lexeme = String.of_char v } :: acc)
-            line
-      | '.' as v ->
-          parse_rec rest
-            (Ok { token_type = DOT; lexeme = String.of_char v } :: acc)
-            line
-      | ';' as v ->
-          parse_rec rest
-            (Ok { token_type = SEMICOLON; lexeme = String.of_char v } :: acc)
-            line
-      | '/' as v ->
-          parse_rec rest
-            (Ok { token_type = SLASH; lexeme = String.of_char v } :: acc)
-            line
-      | '+' as v ->
-          parse_rec rest
-            (Ok { token_type = PLUS; lexeme = String.of_char v } :: acc)
-            line
-      | '-' as v ->
-          parse_rec rest
-            (Ok { token_type = MINUS; lexeme = String.of_char v } :: acc)
-            line
-      | '=' as v ->
-          parse_rec rest
-            (Ok { token_type = EQUAL; lexeme = String.of_char v } :: acc)
-            line
-      | '\n' -> parse_rec rest acc (line + 1)
-      | _ as v ->
-          parse_rec rest
-            (Error
-               (Stdlib.Printf.sprintf
-                  "[line %d] Error: Unexpected character: %c" line v)
-            :: acc)
-            line)
+  | '=' :: rest ->
+      parse_rec rest (Ok { token_type = EQUAL; lexeme = "=" } :: acc) line
+  | '(' :: rest ->
+      parse_rec rest (Ok { token_type = LEFT_PAREN; lexeme = "(" } :: acc) line
+  | ')' :: rest ->
+      parse_rec rest (Ok { token_type = RIGHT_PAREN; lexeme = ")" } :: acc) line
+  | '{' :: rest ->
+      parse_rec rest (Ok { token_type = LEFT_BRACE; lexeme = "{" } :: acc) line
+  | '}' :: rest ->
+      parse_rec rest (Ok { token_type = RIGHT_BRACE; lexeme = "}" } :: acc) line
+  | '*' :: rest ->
+      parse_rec rest (Ok { token_type = STAR; lexeme = "*" } :: acc) line
+  | ',' :: rest ->
+      parse_rec rest (Ok { token_type = COMMA; lexeme = "," } :: acc) line
+  | '.' :: rest ->
+      parse_rec rest (Ok { token_type = DOT; lexeme = "." } :: acc) line
+  | ';' :: rest ->
+      parse_rec rest (Ok { token_type = SEMICOLON; lexeme = ";" } :: acc) line
+  | '/' :: rest ->
+      parse_rec rest (Ok { token_type = SLASH; lexeme = "/" } :: acc) line
+  | '+' :: rest ->
+      parse_rec rest (Ok { token_type = PLUS; lexeme = "+" } :: acc) line
+  | '-' :: rest ->
+      parse_rec rest (Ok { token_type = MINUS; lexeme = "-" } :: acc) line
+  | '\n' :: rest -> parse_rec rest acc (line + 1)
+  | (_ as v) :: rest ->
+      parse_rec rest
+        (Error
+           (Stdlib.Printf.sprintf "[line %d] Error: Unexpected character: %c"
+              line v)
+        :: acc)
+        line
 
 let parse (chars : char list) : token_result_t list =
   parse_rec chars [] 1 |> List.rev
