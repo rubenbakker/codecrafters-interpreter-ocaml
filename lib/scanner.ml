@@ -1,6 +1,8 @@
 open Base
 
 type token_type =
+  | BANG
+  | BANG_EQUAL
   | LEFT_PAREN
   | RIGHT_PAREN
   | LEFT_BRACE
@@ -25,6 +27,10 @@ let rec parse_rec (chars : char list) (acc : token_result_t list) (line : int) :
     token_result_t list =
   match chars with
   | [] -> Ok { token_type = EOF; lexeme = "" } :: acc
+  | '!' :: '=' :: rest ->
+      parse_rec rest (Ok { token_type = BANG_EQUAL; lexeme = "!=" } :: acc) line
+  | '!' :: rest ->
+      parse_rec rest (Ok { token_type = BANG; lexeme = "!" } :: acc) line
   | '=' :: '=' :: rest ->
       parse_rec rest
         (Ok { token_type = EQUAL_EQUAL; lexeme = "==" } :: acc)
@@ -77,6 +83,8 @@ let get_tokens (tokens : token_result_t list) : t list =
 
 let token_name (x : token_type) : string =
   match x with
+  | BANG -> "BANG"
+  | BANG_EQUAL -> "BANG_EQUAL"
   | STAR -> "STAR"
   | COMMA -> "COMMA"
   | PLUS -> "PLUS"
