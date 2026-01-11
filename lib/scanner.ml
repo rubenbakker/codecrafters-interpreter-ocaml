@@ -12,6 +12,8 @@ type token_type =
   | SEMICOLON
   | SLASH
   | PLUS
+  | EQUAL
+  | EQUAL_EQUAL
   | EOF
 
 type t = { token_type : token_type; lexeme : string }
@@ -23,6 +25,8 @@ let rec parse_rec (chars : char list) (acc : token_result_t list) (line : int) :
     token_result_t list =
   match chars with
   | [] -> Ok { token_type = EOF; lexeme = "" } :: acc
+  | '=' :: '=' :: rest ->
+      parse_rec rest (Ok { token_type = LEFT_PAREN; lexeme = "==" } :: acc) line
   | char :: rest -> (
       match char with
       | '(' as v ->
@@ -69,6 +73,10 @@ let rec parse_rec (chars : char list) (acc : token_result_t list) (line : int) :
           parse_rec rest
             (Ok { token_type = MINUS; lexeme = String.of_char v } :: acc)
             line
+      | '=' as v ->
+          parse_rec rest
+            (Ok { token_type = EQUAL; lexeme = String.of_char v } :: acc)
+            line
       | '\n' -> parse_rec rest acc (line + 1)
       | _ as v ->
           parse_rec rest
@@ -104,6 +112,8 @@ let token_name (x : token_type) : string =
   | RIGHT_PAREN -> "RIGHT_PAREN"
   | LEFT_BRACE -> "LEFT_BRACE"
   | RIGHT_BRACE -> "RIGHT_BRACE"
+  | EQUAL -> "EQUAL"
+  | EQUAL_EQUAL -> "EQUAL_EQUAL"
   | EOF -> "EOF"
 
 let t_to_string token =
