@@ -43,7 +43,14 @@ let rec consume_string chars str line =
         line )
   | '\"' :: rest ->
       let str = '\"' :: str |> List.rev |> String.of_char_list in
-      (rest, Ok { token_type = STRING str; lexeme = str }, line)
+      ( rest,
+        Ok
+          {
+            token_type =
+              STRING (String.sub ~pos:1 ~len:(String.length str - 2) str);
+            lexeme = str;
+          },
+        line )
   | '\n' :: rest -> consume_string rest ('\n' :: str) (line + 1)
   | (_ as v) :: rest -> consume_string rest (v :: str) line
 
