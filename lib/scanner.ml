@@ -1,6 +1,15 @@
 open Base
 
-type token_type = LEFT_PAREN | RIGHT_PAREN | LEFT_BRACE | RIGHT_BRACE | EOF
+type token_type =
+  | LEFT_PAREN
+  | RIGHT_PAREN
+  | LEFT_BRACE
+  | RIGHT_BRACE
+  | STAR
+  | COMMA
+  | PLUS
+  | EOF
+
 type t = { token_type : token_type; lexeme : string }
 
 let char_list_of_string str = List.init (String.length str) ~f:(String.get str)
@@ -26,6 +35,18 @@ let rec parse_rec (chars : char list) (acc : t list) (line : int) : t list =
           parse_rec rest
             ({ token_type = RIGHT_BRACE; lexeme = String.of_char v } :: acc)
             line
+      | '*' as v ->
+          parse_rec rest
+            ({ token_type = STAR; lexeme = String.of_char v } :: acc)
+            line
+      | ',' as v ->
+          parse_rec rest
+            ({ token_type = COMMA; lexeme = String.of_char v } :: acc)
+            line
+      | '+' as v ->
+          parse_rec rest
+            ({ token_type = PLUS; lexeme = String.of_char v } :: acc)
+            line
       | '\n' -> parse_rec rest acc (line + 1)
       | _ -> parse_rec rest acc line)
 
@@ -33,6 +54,9 @@ let parse (chars : char list) : t list = parse_rec chars [] 1 |> List.rev
 
 let token_name (x : token_type) : string =
   match x with
+  | STAR -> "STAR"
+  | COMMA -> "COMMA"
+  | PLUS -> "PLUS"
   | LEFT_PAREN -> "LEFT_PAREN"
   | RIGHT_PAREN -> "RIGHT_PAREN"
   | LEFT_BRACE -> "LEFT_BRACE"
