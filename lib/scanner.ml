@@ -22,7 +22,7 @@ type token_type =
   | EQUAL_EQUAL
   | STRING of string
   | NUMBER of float
-  | INDENTIFIER of string
+  | IDENTIFIER of string
   | EOF
 
 type t = { token_type : token_type; lexeme : string }
@@ -72,7 +72,7 @@ let rec scan_string chars str line =
 
 let token_for_identifier identifier_chars : t =
   let str = List.rev identifier_chars |> String.of_char_list in
-  { token_type = INDENTIFIER str; lexeme = str }
+  { token_type = IDENTIFIER str; lexeme = str }
 
 let rec scan_identifier chars identifier =
   match chars with
@@ -184,7 +184,7 @@ let token_name (x : token_type) : string =
   | RIGHT_BRACE -> "RIGHT_BRACE"
   | EQUAL -> "EQUAL"
   | EQUAL_EQUAL -> "EQUAL_EQUAL"
-  | INDENTIFIER _ -> "INDENTIFIER"
+  | IDENTIFIER _ -> "IDENTIFIER"
   | EOF -> "EOF"
 
 let literal token_type =
