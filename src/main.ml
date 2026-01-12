@@ -1,4 +1,5 @@
 open Base
+open Lib
 
 let () =
   if Array.length Stdlib.Sys.argv < 3 then (
@@ -14,11 +15,13 @@ let () =
 
   let file_contents = In_channel.with_open_text filename In_channel.input_all in
 
-  let open Lib.Scanner in
-  let token_results = char_list_of_string file_contents |> parse in
-  let errors = token_results |> get_errors in
+  let token_results = Scanner.scan file_contents in
+  let errors = token_results |> Scanner.get_errors in
+
   errors |> List.map ~f:(fun error -> Stdlib.prerr_endline error) |> ignore;
-  token_results |> get_tokens |> print_tokens;
+
+  token_results |> Scanner.get_tokens |> Tokens.print_tokens;
+
   Stdlib.flush Stdlib.stderr;
   Stdlib.flush Stdlib.stdout;
   let exit_code = match errors with [] -> 0 | _ -> 65 in
