@@ -22,7 +22,23 @@ type token_type =
   | EQUAL_EQUAL
   | STRING of string
   | NUMBER of float
-  | IDENTIFIER of string
+  | IDENTIFIER
+  | AND
+  | CLASS
+  | ELSE
+  | FALSE
+  | FOR
+  | FUN
+  | IF
+  | NIL
+  | OR
+  | PRINT
+  | RETURN
+  | SUPER
+  | THIS
+  | TRUE
+  | VAR
+  | WHILE
   | EOF
 
 type t = { token_type : token_type; lexeme : string }
@@ -72,7 +88,27 @@ let rec scan_string chars str line =
 
 let token_for_identifier identifier_chars : t =
   let str = List.rev identifier_chars |> String.of_char_list in
-  { token_type = IDENTIFIER str; lexeme = str }
+  let token_type =
+    match str with
+    | "and" -> AND
+    | "class" -> CLASS
+    | "else" -> ELSE
+    | "false" -> FALSE
+    | "for" -> FOR
+    | "fun" -> FUN
+    | "if" -> IF
+    | "nil" -> NIL
+    | "or" -> OR
+    | "print" -> PRINT
+    | "return" -> RETURN
+    | "super" -> SUPER
+    | "this" -> THIS
+    | "true" -> TRUE
+    | "var" -> VAR
+    | "while" -> WHILE
+    | _ -> IDENTIFIER
+  in
+  { token_type; lexeme = str }
 
 let rec scan_identifier chars identifier =
   match chars with
@@ -184,7 +220,23 @@ let token_name (x : token_type) : string =
   | RIGHT_BRACE -> "RIGHT_BRACE"
   | EQUAL -> "EQUAL"
   | EQUAL_EQUAL -> "EQUAL_EQUAL"
-  | IDENTIFIER _ -> "IDENTIFIER"
+  | IDENTIFIER -> "IDENTIFIER"
+  | AND -> "AND"
+  | CLASS -> "CLASS"
+  | ELSE -> "ELSE"
+  | FALSE -> "FALSE"
+  | FOR -> "FOR"
+  | FUN -> "FUN"
+  | IF -> "IF"
+  | NIL -> "NIL"
+  | OR -> "OR"
+  | PRINT -> "PRINT"
+  | RETURN -> "RETURN"
+  | SUPER -> "SUPER"
+  | THIS -> "THIS"
+  | TRUE -> "TRUE"
+  | VAR -> "VAR"
+  | WHILE -> "WHILE"
   | EOF -> "EOF"
 
 let literal token_type =
