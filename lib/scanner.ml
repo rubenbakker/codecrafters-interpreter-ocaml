@@ -22,11 +22,14 @@ type token_type =
   | EQUAL_EQUAL
   | STRING of string
   | NUMBER of float
+  | INDENTIFIER of string
   | EOF
 
 type t = { token_type : token_type; lexeme : string }
 type token_result_t = (t, string) Result.t
 
+let char_is_alphanum char = Char.is_alphanum char || Char.(char = '_')
+let char_is_alpha char = Char.is_alpha char || Char.(char = '_')
 let char_list_of_string str = List.init (String.length str) ~f:(String.get str)
 
 let rec skip_comment chars =
@@ -39,15 +42,15 @@ let number_token_of_chars chars =
   let str = chars |> List.rev |> String.of_char_list in
   { token_type = NUMBER (Float.of_string str); lexeme = str }
 
-let rec consume_number (chars : char list) (num_chars : char list) :
+let rec scan_number (chars : char list) (num_chars : char list) :
     char list * token_result_t =
   match chars with
   | [] -> (chars, Ok (number_token_of_chars num_chars))
-  | ('.' as v) :: rest -> consume_number rest (v :: num_chars)
-  | (_ as v) :: rest when Char.is_digit v -> consume_number rest (v :: num_chars)
+  | ('.' as v) :: rest -> scan_number rest (v :: num_chars)
+  | (_ as v) :: rest when Char.is_digit v -> scan_number rest (v :: num_chars)
   | _ -> (chars, Ok (number_token_of_chars num_chars))
 
-let rec consume_string chars str line =
+let rec scan_string chars str line =
   match chars with
   | [] ->
       ( chars,
@@ -64,15 +67,26 @@ let rec consume_string chars str line =
             lexeme = str;
           },
         line )
-  | '\n' :: rest -> consume_string rest ('\n' :: str) (line + 1)
-  | (_ as v) :: rest -> consume_string rest (v :: str) line
+  | '\n' :: rest -> scan_string rest ('\n' :: str) (line + 1)
+  | (_ as v) :: rest -> scan_string rest (v :: str) line
+
+let token_for_identifier identifier_chars : t =
+  let str = List.rev identifier_chars |> String.of_char_list in
+  { token_type = INDENTIFIER str; lexeme = str }
+
+let rec scan_identifier chars identifier =
+  match chars with
+  | [] -> (chars, Ok (token_for_identifier identifier))
+  | (_ as v) :: rest when char_is_alphanum v ->
+      scan_identifier rest (v :: identifier)
+  | _ -> (chars, Ok (token_for_identifier identifier))
 
 let rec parse_rec (chars : char list) (acc : token_result_t list) (line : int) :
     token_result_t list =
   match chars with
   | [] -> Ok { token_type = EOF; lexeme = "" } :: acc
   | '\"' :: rest ->
-      let rest, string_token_result, line = consume_string rest [ '\"' ] line in
+      let rest, string_token_result, line = scan_string rest [ '\"' ] line in
       parse_rec rest (string_token_result :: acc) line
   | '!' :: '=' :: rest ->
       parse_rec rest (Ok { token_type = BANG_EQUAL; lexeme = "!=" } :: acc) line
@@ -120,8 +134,11 @@ let rec parse_rec (chars : char list) (acc : token_result_t list) (line : int) :
   | '\n' :: rest -> parse_rec rest acc (line + 1)
   | '\t' :: rest -> parse_rec rest acc line
   | ' ' :: rest -> parse_rec rest acc line
+  | (_ as v) :: rest when char_is_alpha v ->
+      let rest, token_result = scan_identifier rest [ v ] in
+      parse_rec rest (token_result :: acc) line
   | (_ as v) :: rest when Char.is_digit v ->
-      let rest, token_result = consume_number rest [ v ] in
+      let rest, token_result = scan_number rest [ v ] in
       parse_rec rest (token_result :: acc) line
   | (_ as v) :: rest ->
       parse_rec rest
@@ -167,6 +184,7 @@ let token_name (x : token_type) : string =
   | RIGHT_BRACE -> "RIGHT_BRACE"
   | EQUAL -> "EQUAL"
   | EQUAL_EQUAL -> "EQUAL_EQUAL"
+  | INDENTIFIER _ -> "INDENTIFIER"
   | EOF -> "EOF"
 
 let literal token_type =
