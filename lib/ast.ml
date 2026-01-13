@@ -70,7 +70,7 @@ let rec to_string (ast : t) : string =
       Stdlib.Printf.sprintf "(%s %s %s)" (to_string left_expr)
         (token_type_to_string operator)
         (to_string right_expr)
-  | Grouping expr -> Stdlib.Printf.sprintf "(%s)" (to_string expr)
+  | Grouping expr -> Stdlib.Printf.sprintf "(group %s)" (to_string expr)
   | Literal value -> literal_to_string value
   | Unary (operator, expr) ->
       Stdlib.Printf.sprintf "%s%s"
