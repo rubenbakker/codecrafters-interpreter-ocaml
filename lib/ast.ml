@@ -62,7 +62,7 @@ let literal_to_string literal =
   | LiteralBoolean value -> (
       match value with true -> "true" | false -> "false")
   | LiteralNil -> "nil"
-  | LiteralString value -> Stdlib.Printf.sprintf "\"%s\"" value
+  | LiteralString value -> value
 
 let rec to_string (ast : t) : string =
   match ast with
