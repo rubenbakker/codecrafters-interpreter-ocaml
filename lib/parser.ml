@@ -4,123 +4,121 @@ exception Invalid_state of string * string
 
 let rec expression (tokens : Tokens.t list) = equality tokens
 
-and equality (tokens : Tokens.t list) : Ast.t * Tokens.t list =
-  let left_expr, rest = comparison tokens in
-  match equality_right rest left_expr with
+and equality (tokens : Tokens.t list) : Tokens.t list * Ast.t =
+  let rest, expr = comparison tokens in
+  match equality_right rest expr with
   | Some result -> result
-  | None -> (left_expr, rest)
+  | None -> (rest, expr)
 
 and equality_right (tokens : Tokens.t list) (expr : Ast.t) :
-    (Ast.t * Tokens.t list) option =
+    (Tokens.t list * Ast.t) option =
   match tokens with
   | operator :: rest
     when Tokens.equal_token_type operator.token_type Tokens.EQUAL
          || Tokens.equal_token_type operator.token_type Tokens.BANG_EQUAL
          || Tokens.equal_token_type operator.token_type Tokens.EQUAL_EQUAL -> (
-      let right_expr, rest = comparison rest in
+      let rest, right_expr = comparison rest in
       let ast = Ast.Binary (expr, operator.token_type, right_expr) in
       match equality_right rest ast with
-      | Some (ast, rest) -> Some (ast, rest)
-      | None -> Some (ast, rest))
+      | Some result -> Some result
+      | None -> Some (rest, ast))
   | _ -> None
 
-and comparison (tokens : Tokens.t list) : Ast.t * Tokens.t list =
-  let left_expr, rest = term tokens in
-  match comparison_right rest left_expr with
+and comparison (tokens : Tokens.t list) : Tokens.t list * Ast.t =
+  let rest, expr = term tokens in
+  match comparison_right rest expr with
   | Some result -> result
-  | None -> (left_expr, rest)
+  | None -> (rest, expr)
 
 and comparison_right (tokens : Tokens.t list) (expr : Ast.t) :
-    (Ast.t * Tokens.t list) option =
+    (Tokens.t list * Ast.t) option =
   match tokens with
   | operator :: rest
     when Tokens.equal_token_type operator.token_type Tokens.GREATER
          || Tokens.equal_token_type operator.token_type Tokens.GREATER_EQUAL
          || Tokens.equal_token_type operator.token_type Tokens.LESS
          || Tokens.equal_token_type operator.token_type Tokens.LESS_EQUAL -> (
-      let right_expr, rest = term rest in
+      let rest, right_expr = term rest in
       let ast = Ast.Binary (expr, operator.token_type, right_expr) in
       match comparison_right rest ast with
-      | Some (ast, rest) -> Some (ast, rest)
-      | None -> Some (ast, rest))
+      | Some result -> Some result
+      | None -> Some (rest, ast))
   | _ -> None
 
-and term (tokens : Tokens.t list) : Ast.t * Tokens.t list =
-  let left_expr, rest = factor tokens in
-  match term_right rest left_expr with
-  | Some result -> result
-  | None -> (left_expr, rest)
+and term (tokens : Tokens.t list) : Tokens.t list * Ast.t =
+  let rest, expr = factor tokens in
+  match term_right rest expr with Some result -> result | None -> (rest, expr)
 
 and term_right (tokens : Tokens.t list) (expr : Ast.t) :
-    (Ast.t * Tokens.t list) option =
+    (Tokens.t list * Ast.t) option =
   match tokens with
   | operator :: rest
     when Tokens.equal_token_type operator.token_type Tokens.MINUS
          || Tokens.equal_token_type operator.token_type Tokens.PLUS -> (
-      let right_expr, rest = factor rest in
+      let rest, right_expr = factor rest in
       let ast = Ast.Binary (expr, operator.token_type, right_expr) in
       match term_right rest ast with
-      | Some (ast, rest) -> Some (ast, rest)
-      | None -> Some (ast, rest))
+      | Some result -> Some result
+      | None -> Some (rest, ast))
   | _ -> None
 
-and factor (tokens : Tokens.t list) : Ast.t * Tokens.t list =
-  let left_expr, rest = unary tokens in
-  match factor_right rest left_expr with
+and factor (tokens : Tokens.t list) : Tokens.t list * Ast.t =
+  let rest, expr = unary tokens in
+  match factor_right rest expr with
   | Some result -> result
-  | None -> (left_expr, rest)
+  | None -> (rest, expr)
 
 and factor_right (tokens : Tokens.t list) (expr : Ast.t) :
-    (Ast.t * Tokens.t list) option =
+    (Tokens.t list * Ast.t) option =
   match tokens with
   | operator :: rest
     when Tokens.equal_token_type operator.token_type Tokens.STAR
          || Tokens.equal_token_type operator.token_type Tokens.SLASH -> (
-      let right_expr, rest = unary rest in
+      let rest, right_expr = unary rest in
       let ast = Ast.Binary (expr, operator.token_type, right_expr) in
       match factor_right rest ast with
-      | Some (ast, rest) -> Some (ast, rest)
-      | None -> Some (ast, rest))
+      | Some result -> Some result
+      | None -> Some (rest, ast))
   | _ -> None
 
-and unary (tokens : Tokens.t list) : Ast.t * Tokens.t list =
+and unary (tokens : Tokens.t list) : Tokens.t list * Ast.t =
   match tokens with
   | operator :: rest
     when Tokens.equal_token_type operator.token_type Tokens.BANG
          || Tokens.equal_token_type operator.token_type Tokens.MINUS ->
-      let right_ast, rest = unary rest in
-      (Ast.Unary (operator.token_type, right_ast), rest)
+      let rest, right_expr = unary rest in
+      (rest, Ast.Unary (operator.token_type, right_expr))
   | _ -> primary tokens
 
-and primary (tokens : Tokens.t list) : Ast.t * Tokens.t list =
+and primary (tokens : Tokens.t list) : Tokens.t list * Ast.t =
   match tokens with
   | { token_type = Tokens.TRUE; _ } :: rest ->
-      (Ast.Literal (Ast.LiteralBoolean true), rest)
+      (rest, Ast.Literal (Ast.LiteralBoolean true))
   | { token_type = Tokens.FALSE; _ } :: rest ->
-      (Ast.Literal (Ast.LiteralBoolean false), rest)
-  | { token_type = Tokens.NIL; _ } :: rest -> (Ast.Literal Ast.LiteralNil, rest)
+      (rest, Ast.Literal (Ast.LiteralBoolean false))
+  | { token_type = Tokens.NIL; _ } :: rest -> (rest, Ast.Literal Ast.LiteralNil)
   | { token_type = Tokens.NUMBER value; _ } :: rest ->
-      (Ast.Literal (Ast.LiteralNumber value), rest)
+      (rest, Ast.Literal (Ast.LiteralNumber value))
   | { token_type = Tokens.STRING value; _ } :: rest ->
-      (Ast.Literal (Ast.LiteralString value), rest)
+      (rest, Ast.Literal (Ast.LiteralString value))
   | { token_type = Tokens.LEFT_PAREN; _ } :: rest -> (
-      let ast, (rest : Tokens.t list) = expression rest in
+      let (rest : Tokens.t list), ast = expression rest in
       match rest with
       | { token_type = Tokens.RIGHT_PAREN; _ } :: rest ->
-          (Ast.Grouping ast, rest)
+          (rest, Ast.Grouping ast)
       | _ ->
           raise
             (Invalid_state
                ( "missing right paren",
                  List.hd_exn tokens |> Tokens.sexp_of_t |> Sexp.to_string_hum ))
       )
-  | { token_type = Tokens.EOF; _ } :: rest -> (Ast.Literal Ast.LiteralNil, rest)
+  | { token_type = Tokens.EOF; _ } :: rest -> (rest, Ast.Literal Ast.LiteralNil)
   | _ ->
       raise
         (Invalid_state
            ( "Unknown primary token",
              List.hd_exn tokens |> Tokens.sexp_of_t |> Sexp.to_string_hum ))
 
-let parse (tokens : Tokens.t list) =
-  let ast, _ = expression tokens in
+let parse (tokens : Tokens.t list) : Ast.t =
+  let _, ast = expression tokens in
   ast
