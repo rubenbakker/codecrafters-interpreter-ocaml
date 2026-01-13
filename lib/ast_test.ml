@@ -43,5 +43,5 @@ let%expect_test "to_string" =
   in
   Ast.to_string ast |> Stdlib.print_endline;
   [%expect {|
-    (5.0 * (7.0 * 2.0))
+    (* 5.0 (* 7.0 2.0))
     |}]

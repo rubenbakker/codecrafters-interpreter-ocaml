@@ -31,26 +31,33 @@ and comparison (tokens : Tokens.t list) (ast : Ast.t option) :
   | _ -> ( match ast with Some ast -> (ast, rest) | None -> (left_expr, rest))
 
 and term (tokens : Tokens.t list) (ast : Ast.t option) : Ast.t * Tokens.t list =
-  let left_expr, rest = factor tokens None in
+  let left_expr, rest = factor tokens in
   match rest with
   | operator :: rest
     when Tokens.equal_token_type operator.token_type Tokens.MINUS
          || Tokens.equal_token_type operator.token_type Tokens.PLUS ->
-      let right_expr, rest = factor rest None in
+      let right_expr, rest = factor rest in
       term rest (Some (Ast.Binary (left_expr, operator.token_type, right_expr)))
   | _ -> ( match ast with Some ast -> (ast, rest) | None -> (left_expr, rest))
 
-and factor (tokens : Tokens.t list) (ast : Ast.t option) : Ast.t * Tokens.t list
-    =
+and factor (tokens : Tokens.t list) : Ast.t * Tokens.t list =
   let left_expr, rest = unary tokens in
-  match rest with
+  match factor_right rest left_expr with
+  | Some result -> result
+  | None -> (left_expr, rest)
+
+and factor_right (tokens : Tokens.t list) (expr : Ast.t) :
+    (Ast.t * Tokens.t list) option =
+  match tokens with
   | operator :: rest
     when Tokens.equal_token_type operator.token_type Tokens.STAR
-         || Tokens.equal_token_type operator.token_type Tokens.SLASH ->
+         || Tokens.equal_token_type operator.token_type Tokens.SLASH -> (
       let right_expr, rest = unary rest in
-      factor rest
-        (Some (Ast.Binary (left_expr, operator.token_type, right_expr)))
-  | _ -> ( match ast with Some ast -> (ast, rest) | None -> (left_expr, rest))
+      let ast = Ast.Binary (expr, operator.token_type, right_expr) in
+      match factor_right rest ast with
+      | Some (ast, rest) -> Some (ast, rest)
+      | None -> Some (ast, rest))
+  | _ -> None
 
 and unary (tokens : Tokens.t list) : Ast.t * Tokens.t list =
   match tokens with
