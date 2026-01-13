@@ -40,11 +40,13 @@ type token_type =
   | VAR
   | WHILE
   | EOF
+[@@deriving compare, equal, sexp]
 
 type t = { token_type : token_type; lexeme : string }
+[@@deriving compare, equal, sexp]
 
-let token_name (x : token_type) : string =
-  match x with
+let token_name token : string =
+  match token.token_type with
   | STRING _ -> "STRING"
   | NUMBER _ -> "NUMBER"
   | BANG -> "BANG"
@@ -85,24 +87,24 @@ let token_name (x : token_type) : string =
   | WHILE -> "WHILE"
   | EOF -> "EOF"
 
-let literal token_type =
-  match token_type with
+let number_to_string value =
+  let value = Float.to_string value in
+  let value = String.rstrip ~drop:(fun ch -> Char.(ch = '0')) value in
+  match Stdlib.String.ends_with ~suffix:"." value with
+  | true -> String.append value "0"
+  | false -> value
+
+let literal token =
+  match token.token_type with
   | STRING value -> Some value
-  | NUMBER value -> (
-      let value = Float.to_string value in
-      let value = String.rstrip ~drop:(fun ch -> Char.(ch = '0')) value in
-      match Stdlib.String.ends_with ~suffix:"." value with
-      | true -> Some (String.append value "0")
-      | false -> Some value)
+  | NUMBER value -> Some (number_to_string value)
   | _ -> None
 
 let to_string token =
   let literal_value =
-    match literal token.token_type with Some value -> value | None -> "null"
+    match literal token with Some value -> value | None -> "null"
   in
-  Stdlib.Printf.sprintf "%s %s %s"
-    (token_name token.token_type)
-    token.lexeme literal_value
+  Stdlib.Printf.sprintf "%s %s %s" (token_name token) token.lexeme literal_value
 
 let print_tokens tokens =
   List.map ~f:(fun token -> Stdlib.print_endline (to_string token)) tokens
