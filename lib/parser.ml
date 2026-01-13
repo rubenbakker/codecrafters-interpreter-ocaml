@@ -18,27 +18,36 @@ and equality (tokens : Tokens.t list) (ast : Ast.t option) :
 
 and comparison (tokens : Tokens.t list) (ast : Ast.t option) :
     Ast.t * Tokens.t list =
-  let left_expr, rest = term tokens None in
+  let left_expr, rest = term tokens in
   match rest with
   | operator :: rest
     when Tokens.equal_token_type operator.token_type Tokens.GREATER
          || Tokens.equal_token_type operator.token_type Tokens.GREATER_EQUAL
          || Tokens.equal_token_type operator.token_type Tokens.LESS
          || Tokens.equal_token_type operator.token_type Tokens.LESS_EQUAL ->
-      let right_expr, rest = term rest None in
+      let right_expr, rest = term rest in
       comparison rest
         (Some (Ast.Binary (left_expr, operator.token_type, right_expr)))
   | _ -> ( match ast with Some ast -> (ast, rest) | None -> (left_expr, rest))
 
-and term (tokens : Tokens.t list) (ast : Ast.t option) : Ast.t * Tokens.t list =
+and term (tokens : Tokens.t list) : Ast.t * Tokens.t list =
   let left_expr, rest = factor tokens in
-  match rest with
+  match term_right rest left_expr with
+  | Some result -> result
+  | None -> (left_expr, rest)
+
+and term_right (tokens : Tokens.t list) (expr : Ast.t) :
+    (Ast.t * Tokens.t list) option =
+  match tokens with
   | operator :: rest
     when Tokens.equal_token_type operator.token_type Tokens.MINUS
-         || Tokens.equal_token_type operator.token_type Tokens.PLUS ->
+         || Tokens.equal_token_type operator.token_type Tokens.PLUS -> (
       let right_expr, rest = factor rest in
-      term rest (Some (Ast.Binary (left_expr, operator.token_type, right_expr)))
-  | _ -> ( match ast with Some ast -> (ast, rest) | None -> (left_expr, rest))
+      let ast = Ast.Binary (expr, operator.token_type, right_expr) in
+      match term_right rest ast with
+      | Some (ast, rest) -> Some (ast, rest)
+      | None -> Some (ast, rest))
+  | _ -> None
 
 and factor (tokens : Tokens.t list) : Ast.t * Tokens.t list =
   let left_expr, rest = unary tokens in
