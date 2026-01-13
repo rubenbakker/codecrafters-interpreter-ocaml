@@ -24,8 +24,6 @@ let parse_command filename =
       0
   | _ ->
       errors |> List.map ~f:(fun error -> Stdlib.prerr_endline error) |> ignore;
-
-      token_results |> Scanner.get_tokens |> Tokens.print_tokens;
       65
 
 let () =
