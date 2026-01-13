@@ -37,8 +37,7 @@ and term (tokens : Tokens.t list) (ast : Ast.t option) : Ast.t * Tokens.t list =
     when Tokens.equal_token_type operator.token_type Tokens.MINUS
          || Tokens.equal_token_type operator.token_type Tokens.PLUS ->
       let right_expr, rest = factor rest None in
-      comparison rest
-        (Some (Ast.Binary (left_expr, operator.token_type, right_expr)))
+      term rest (Some (Ast.Binary (left_expr, operator.token_type, right_expr)))
   | _ -> ( match ast with Some ast -> (ast, rest) | None -> (left_expr, rest))
 
 and factor (tokens : Tokens.t list) (ast : Ast.t option) : Ast.t * Tokens.t list
@@ -49,7 +48,7 @@ and factor (tokens : Tokens.t list) (ast : Ast.t option) : Ast.t * Tokens.t list
     when Tokens.equal_token_type operator.token_type Tokens.STAR
          || Tokens.equal_token_type operator.token_type Tokens.SLASH ->
       let right_expr, rest = unary rest in
-      comparison rest
+      factor rest
         (Some (Ast.Binary (left_expr, operator.token_type, right_expr)))
   | _ -> ( match ast with Some ast -> (ast, rest) | None -> (left_expr, rest))
 
