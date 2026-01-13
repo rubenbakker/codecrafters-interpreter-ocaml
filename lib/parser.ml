@@ -2,33 +2,47 @@ open! Base
 
 exception Invalid_state of string * string
 
-let rec expression (tokens : Tokens.t list) = equality tokens None
+let rec expression (tokens : Tokens.t list) = equality tokens
 
-and equality (tokens : Tokens.t list) (ast : Ast.t option) :
-    Ast.t * Tokens.t list =
-  let left_expr, rest = comparison tokens None in
-  match rest with
+and equality (tokens : Tokens.t list) : Ast.t * Tokens.t list =
+  let left_expr, rest = comparison tokens in
+  match equality_right rest left_expr with
+  | Some result -> result
+  | None -> (left_expr, rest)
+
+and equality_right (tokens : Tokens.t list) (expr : Ast.t) :
+    (Ast.t * Tokens.t list) option =
+  match tokens with
   | operator :: rest
     when Tokens.equal_token_type operator.token_type Tokens.EQUAL
-         || Tokens.equal_token_type operator.token_type Tokens.EQUAL_EQUAL ->
-      let right_expr, rest = comparison rest None in
-      equality rest
-        (Some (Ast.Binary (left_expr, operator.token_type, right_expr)))
-  | _ -> ( match ast with Some ast -> (ast, rest) | None -> (left_expr, rest))
+         || Tokens.equal_token_type operator.token_type Tokens.EQUAL_EQUAL -> (
+      let right_expr, rest = comparison rest in
+      let ast = Ast.Binary (expr, operator.token_type, right_expr) in
+      match equality_right rest ast with
+      | Some (ast, rest) -> Some (ast, rest)
+      | None -> Some (ast, rest))
+  | _ -> None
 
-and comparison (tokens : Tokens.t list) (ast : Ast.t option) :
-    Ast.t * Tokens.t list =
+and comparison (tokens : Tokens.t list) : Ast.t * Tokens.t list =
   let left_expr, rest = term tokens in
-  match rest with
+  match comparison_right rest left_expr with
+  | Some result -> result
+  | None -> (left_expr, rest)
+
+and comparison_right (tokens : Tokens.t list) (expr : Ast.t) :
+    (Ast.t * Tokens.t list) option =
+  match tokens with
   | operator :: rest
     when Tokens.equal_token_type operator.token_type Tokens.GREATER
          || Tokens.equal_token_type operator.token_type Tokens.GREATER_EQUAL
          || Tokens.equal_token_type operator.token_type Tokens.LESS
-         || Tokens.equal_token_type operator.token_type Tokens.LESS_EQUAL ->
+         || Tokens.equal_token_type operator.token_type Tokens.LESS_EQUAL -> (
       let right_expr, rest = term rest in
-      comparison rest
-        (Some (Ast.Binary (left_expr, operator.token_type, right_expr)))
-  | _ -> ( match ast with Some ast -> (ast, rest) | None -> (left_expr, rest))
+      let ast = Ast.Binary (expr, operator.token_type, right_expr) in
+      match comparison_right rest ast with
+      | Some (ast, rest) -> Some (ast, rest)
+      | None -> Some (ast, rest))
+  | _ -> None
 
 and term (tokens : Tokens.t list) : Ast.t * Tokens.t list =
   let left_expr, rest = factor tokens in
