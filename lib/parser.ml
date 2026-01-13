@@ -15,6 +15,7 @@ and equality_right (tokens : Tokens.t list) (expr : Ast.t) :
   match tokens with
   | operator :: rest
     when Tokens.equal_token_type operator.token_type Tokens.EQUAL
+         || Tokens.equal_token_type operator.token_type Tokens.BANG_EQUAL
          || Tokens.equal_token_type operator.token_type Tokens.EQUAL_EQUAL -> (
       let right_expr, rest = comparison rest in
       let ast = Ast.Binary (expr, operator.token_type, right_expr) in
