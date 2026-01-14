@@ -22,6 +22,14 @@ let is_truthy value =
   | StringValue _ -> true
   | NilValue -> false
 
+let is_equal left right =
+  match (left, right) with
+  | BooleanValue left, BooleanValue right -> Bool.(left = right)
+  | NumberValue left, NumberValue right -> Float.(left = right)
+  | StringValue left, StringValue right -> String.(left = right)
+  | NilValue, NilValue -> true
+  | _, _ -> false
+
 let with_number_value value fn =
   match value with
   | NumberValue n -> NumberValue (fn n)
@@ -32,6 +40,34 @@ let rec evaluate (ast : Ast.t) : value_t =
   | Ast.Unary (token_type, expr) -> unary token_type expr
   | Ast.Literal value -> literal value
   | Ast.Grouping ast -> evaluate ast
+  | Ast.Binary (left_expr, token_type, right_expr) ->
+      binary left_expr token_type right_expr
+
+and binary left_expr token_type right_expr =
+  let left = evaluate left_expr and right = evaluate right_expr in
+  match (token_type, left, right) with
+  | Tokens.EQUAL_EQUAL, left, right -> BooleanValue (is_equal left right)
+  | Tokens.BANG_EQUAL, left, right -> BooleanValue (not (is_equal left right))
+  | Tokens.GREATER, NumberValue left, NumberValue right ->
+      BooleanValue Float.(left > right)
+  | Tokens.GREATER_EQUAL, NumberValue left, NumberValue right ->
+      BooleanValue Float.(left >= right)
+  | Tokens.LESS, NumberValue left, NumberValue right ->
+      BooleanValue Float.(left < right)
+  | Tokens.LESS_EQUAL, NumberValue left, NumberValue right ->
+      BooleanValue Float.(left <= right)
+  | Tokens.SLASH, NumberValue left, NumberValue right ->
+      NumberValue (left /. right)
+  | Tokens.STAR, NumberValue left, NumberValue right ->
+      NumberValue (left *. right)
+  | Tokens.MINUS, NumberValue left, NumberValue right ->
+      NumberValue (left -. right)
+  | Tokens.PLUS, NumberValue left, NumberValue right ->
+      NumberValue (left +. right)
+  | Tokens.PLUS, StringValue left, StringValue right ->
+      StringValue (left ^ right)
+  | Tokens.PLUS, _, _ ->
+      raise (Interpreter_exn "Plus not supported for these datatypes")
   | _ -> raise Notimplemented
 
 and unary token_type expr : value_t =
