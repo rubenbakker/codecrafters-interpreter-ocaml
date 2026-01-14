@@ -12,6 +12,11 @@ let tokenize_command filename =
   token_results |> Scanner.get_tokens |> Tokens.print_tokens;
   match errors with [] -> 0 | _ -> 65
 
+let parse_and_print_result token_results =
+  match token_results |> Scanner.get_tokens |> Parser.parse with
+  | Ok ast -> Ast.to_string ast |> Stdlib.print_endline
+  | Error error -> Stdlib.print_endline (Parser.format_error error)
+
 let parse_command filename =
   let file_contents = In_channel.with_open_text filename In_channel.input_all in
   let token_results = Scanner.scan file_contents in
@@ -19,8 +24,7 @@ let parse_command filename =
 
   match errors with
   | [] ->
-      token_results |> Scanner.get_tokens |> Parser.parse |> Ast.to_string
-      |> Stdlib.print_endline;
+      parse_and_print_result token_results |> ignore;
       0
   | _ ->
       errors |> List.map ~f:(fun error -> Stdlib.prerr_endline error) |> ignore;

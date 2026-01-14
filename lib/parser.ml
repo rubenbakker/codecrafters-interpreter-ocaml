@@ -1,6 +1,8 @@
 open! Base
 
-exception Invalid_state of string * string
+type parse_error = { token : Tokens.t; message : string }
+
+exception Parse_exn of parse_error
 
 let rec expression (tokens : Tokens.t list) = equality tokens
 
@@ -108,17 +110,27 @@ and primary (tokens : Tokens.t list) : Tokens.t list * Ast.t =
           (rest, Ast.Grouping ast)
       | _ ->
           raise
-            (Invalid_state
-               ( "missing right paren",
-                 List.hd_exn tokens |> Tokens.sexp_of_t |> Sexp.to_string_hum ))
-      )
+            (Parse_exn
+               {
+                 token = List.hd_exn rest;
+                 message = "Expect ')' after expression.";
+               }))
   | { token_type = Tokens.EOF; _ } :: rest -> (rest, Ast.Literal Ast.LiteralNil)
   | _ ->
       raise
-        (Invalid_state
-           ( "Unknown primary token",
-             List.hd_exn tokens |> Tokens.sexp_of_t |> Sexp.to_string_hum ))
+        (Parse_exn
+           { token = List.hd_exn tokens; message = "Expect expression." })
 
-let parse (tokens : Tokens.t list) : Ast.t =
-  let _, ast = expression tokens in
-  ast
+let parse (tokens : Tokens.t list) : (Ast.t, parse_error) Result.t =
+  try
+    let _, ast = expression tokens in
+    Ok ast
+  with Parse_exn error -> Error error
+
+let format_error ({ token; message } : parse_error) : string =
+  let pos =
+    match token.token_type with
+    | Tokens.EOF -> "at end"
+    | _ -> Stdlib.Printf.sprintf "at '%s'" token.lexeme
+  in
+  Stdlib.Printf.sprintf "[Line %d] Error %s: %s" token.line pos message

@@ -42,7 +42,7 @@ type token_type =
   | EOF
 [@@deriving compare, equal, sexp]
 
-type t = { token_type : token_type; lexeme : string }
+type t = { token_type : token_type; lexeme : string; line : int }
 [@@deriving compare, equal, sexp]
 
 let token_name token : string =
