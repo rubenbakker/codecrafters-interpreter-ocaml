@@ -20,9 +20,7 @@ let parse filename ok_fn =
   match errors with
   | [] -> (
       match token_results |> Scanner.get_tokens |> Parser.parse with
-      | Ok ast ->
-          ok_fn ast |> ignore;
-          0
+      | Ok ast -> ok_fn ast
       | Error error ->
           Stdlib.prerr_endline (Parser.format_error error);
           65)
@@ -31,7 +29,9 @@ let parse filename ok_fn =
       65
 
 let parse_command filename =
-  parse filename (fun ast -> Ast.to_string ast |> Stdlib.print_endline)
+  parse filename (fun ast ->
+      Ast.to_string ast |> Stdlib.print_endline;
+      0)
 
 let evaluate_command filename =
   parse filename (fun ast ->
