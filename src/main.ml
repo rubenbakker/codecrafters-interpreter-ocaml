@@ -18,7 +18,7 @@ let parse_and_print_result token_results =
       Ast.to_string ast |> Stdlib.print_endline;
       0
   | Error error ->
-      Stdlib.print_endline (Parser.format_error error);
+      Stdlib.prerr_endline (Parser.format_error error);
       65
 
 let parse_command filename =
