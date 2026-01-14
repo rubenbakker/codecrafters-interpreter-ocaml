@@ -15,6 +15,13 @@ let with_boolean_value value fn =
   | BooleanValue b -> BooleanValue (fn b)
   | _ -> raise (Interpreter_exn "Not a boolean!")
 
+let is_truthy value =
+  match value with
+  | BooleanValue b -> b
+  | NumberValue _ -> true
+  | StringValue _ -> true
+  | NilValue -> false
+
 let with_number_value value fn =
   match value with
   | NumberValue n -> NumberValue (fn n)
@@ -30,7 +37,7 @@ let rec evaluate (ast : Ast.t) : value_t =
 and unary token_type expr : value_t =
   let right_value = evaluate expr in
   match token_type with
-  | Tokens.BANG -> with_boolean_value right_value (fun b -> not b)
+  | Tokens.BANG -> BooleanValue (is_truthy right_value |> not)
   | Tokens.MINUS -> with_number_value right_value (fun n -> n *. -1.0)
   | _ -> raise Notimplemented
 
