@@ -24,6 +24,7 @@ let rec evaluate (ast : Ast.t) : value_t =
   match ast with
   | Ast.Unary (token_type, expr) -> unary token_type expr
   | Ast.Literal value -> literal value
+  | Ast.Grouping ast -> evaluate ast
   | _ -> raise Notimplemented
 
 and unary token_type expr : value_t =
