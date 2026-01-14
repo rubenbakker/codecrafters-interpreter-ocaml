@@ -10,7 +10,10 @@ let%expect_test "simple unary" =
   let res = Parser.parse tokens in
   Result.ok res |> Option.value_exn |> Ast.sexp_of_t |> Sexp.to_string_hum
   |> Stdlib.print_endline;
-  [%expect {| (Unary BANG (Literal (LiteralBoolean true))) |}]
+  [%expect {|
+    (Unary ((token_type BANG) (lexeme !) (line 1))
+     (Literal (LiteralBoolean true)))
+    |}]
 
 let%expect_test "double unary" =
   let tokens : Tokens.t list =
@@ -23,7 +26,11 @@ let%expect_test "double unary" =
   let res = Parser.parse tokens in
   Result.ok res |> Option.value_exn |> Ast.sexp_of_t |> Sexp.to_string_hum
   |> Stdlib.print_endline;
-  [%expect {| (Unary BANG (Unary BANG (Literal (LiteralBoolean true)))) |}]
+  [%expect {|
+    (Unary ((token_type BANG) (lexeme !) (line 1))
+     (Unary ((token_type BANG) (lexeme !) (line 1))
+      (Literal (LiteralBoolean true))))
+    |}]
 
 let%expect_test "minus number" =
   let tokens : Tokens.t list =
@@ -35,7 +42,7 @@ let%expect_test "minus number" =
   let res = Parser.parse tokens in
   Result.ok res |> Option.value_exn |> Ast.sexp_of_t |> Sexp.to_string_hum
   |> Stdlib.print_endline;
-  [%expect {| (Unary MINUS (Literal (LiteralNumber 5))) |}]
+  [%expect {| (Unary ((token_type MINUS) (lexeme -) (line 1)) (Literal (LiteralNumber 5))) |}]
 
 let%expect_test "unary with grouping" =
   let tokens : Tokens.t list =
@@ -50,7 +57,10 @@ let%expect_test "unary with grouping" =
   let res = Parser.parse tokens in
   Result.ok res |> Option.value_exn |> Ast.sexp_of_t |> Sexp.to_string_hum
   |> Stdlib.print_endline;
-  [%expect {| (Unary MINUS (Grouping (Literal (LiteralNumber 5)))) |}]
+  [%expect {|
+    (Unary ((token_type MINUS) (lexeme -) (line 1))
+     (Grouping (Literal (LiteralNumber 5))))
+    |}]
 
 let%expect_test "parse arithmetic" =
   let tokens : Tokens.t list =

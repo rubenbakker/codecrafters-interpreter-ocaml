@@ -7,13 +7,10 @@ type value_t =
   | NilValue
 [@@deriving sexp, compare, equal]
 
-exception Interpreter_exn of string
-exception Notimplemented
+type runtime_error = { token : Tokens.t; message : string }
 
-let with_boolean_value value fn =
-  match value with
-  | BooleanValue b -> BooleanValue (fn b)
-  | _ -> raise (Interpreter_exn "Not a boolean!")
+exception Runtime_exn of runtime_error
+exception Notimplemented
 
 let is_truthy value =
   match value with
@@ -30,11 +27,6 @@ let is_equal left right =
   | NilValue, NilValue -> true
   | _, _ -> false
 
-let with_number_value value fn =
-  match value with
-  | NumberValue n -> NumberValue (fn n)
-  | _ -> raise (Interpreter_exn "Not a number!")
-
 let rec evaluate (ast : Ast.t) : value_t =
   match ast with
   | Ast.Unary (token_type, expr) -> unary token_type expr
@@ -43,9 +35,9 @@ let rec evaluate (ast : Ast.t) : value_t =
   | Ast.Binary (left_expr, token_type, right_expr) ->
       binary left_expr token_type right_expr
 
-and binary left_expr token_type right_expr =
+and binary left_expr token right_expr =
   let left = evaluate left_expr and right = evaluate right_expr in
-  match (token_type, left, right) with
+  match (token.token_type, left, right) with
   | Tokens.EQUAL_EQUAL, left, right -> BooleanValue (is_equal left right)
   | Tokens.BANG_EQUAL, left, right -> BooleanValue (not (is_equal left right))
   | Tokens.GREATER, NumberValue left, NumberValue right ->
@@ -66,15 +58,16 @@ and binary left_expr token_type right_expr =
       NumberValue (left +. right)
   | Tokens.PLUS, StringValue left, StringValue right ->
       StringValue (left ^ right)
-  | Tokens.PLUS, _, _ ->
-      raise (Interpreter_exn "Plus not supported for these datatypes")
-  | _ -> raise Notimplemented
+  | _, _, _ ->
+      raise (Runtime_exn { token; message = "Operands must be numbers" })
 
-and unary token_type expr : value_t =
+and unary token expr : value_t =
   let right_value = evaluate expr in
-  match token_type with
-  | Tokens.BANG -> BooleanValue (is_truthy right_value |> not)
-  | Tokens.MINUS -> with_number_value right_value (fun n -> n *. -1.0)
+  match (token.token_type, right_value) with
+  | Tokens.MINUS, NumberValue n -> NumberValue (n *. -1.0)
+  | Tokens.MINUS, _ ->
+      raise (Runtime_exn { token; message = "Operands must be numbers" })
+  | Tokens.BANG, _ -> BooleanValue (is_truthy right_value |> not)
   | _ -> raise Notimplemented
 
 and literal literal : value_t =
@@ -97,3 +90,9 @@ let value_to_string value =
   | NumberValue n -> number_to_string n
   | StringValue s -> s
   | NilValue -> "nil"
+
+let error_to_string error =
+  Stdlib.Printf.sprintf "%s\n[line %d]" error.message error.token.line
+
+let run (ast : Ast.t) : (value_t, runtime_error) Result.t =
+  try Ok (evaluate ast) with Runtime_exn runtime_error -> Error runtime_error

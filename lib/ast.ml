@@ -8,10 +8,10 @@ type literal_t =
 [@@deriving compare, equal, sexp]
 
 type t =
-  | Binary of t * Tokens.token_type * t
+  | Binary of t * Tokens.t * t
   | Grouping of t
   | Literal of literal_t
-  | Unary of Tokens.token_type * t
+  | Unary of Tokens.t * t
 [@@deriving compare, equal, sexp]
 
 let token_type_to_string token_type =
@@ -68,11 +68,11 @@ let rec to_string (ast : t) : string =
   match ast with
   | Binary (left_expr, operator, right_expr) ->
       Stdlib.Printf.sprintf "(%s %s %s)"
-        (token_type_to_string operator)
+        (token_type_to_string operator.token_type)
         (to_string left_expr) (to_string right_expr)
   | Grouping expr -> Stdlib.Printf.sprintf "(group %s)" (to_string expr)
   | Literal value -> literal_to_string value
   | Unary (operator, expr) ->
       Stdlib.Printf.sprintf "(%s %s)"
-        (token_type_to_string operator)
+        (token_type_to_string operator.token_type)
         (to_string expr)

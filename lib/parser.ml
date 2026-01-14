@@ -20,7 +20,7 @@ and equality_right (tokens : Tokens.t list) (expr : Ast.t) :
          || Tokens.equal_token_type operator.token_type Tokens.BANG_EQUAL
          || Tokens.equal_token_type operator.token_type Tokens.EQUAL_EQUAL -> (
       let rest, right_expr = comparison rest in
-      let ast = Ast.Binary (expr, operator.token_type, right_expr) in
+      let ast = Ast.Binary (expr, operator, right_expr) in
       match equality_right rest ast with
       | Some result -> Some result
       | None -> Some (rest, ast))
@@ -41,7 +41,7 @@ and comparison_right (tokens : Tokens.t list) (expr : Ast.t) :
          || Tokens.equal_token_type operator.token_type Tokens.LESS
          || Tokens.equal_token_type operator.token_type Tokens.LESS_EQUAL -> (
       let rest, right_expr = term rest in
-      let ast = Ast.Binary (expr, operator.token_type, right_expr) in
+      let ast = Ast.Binary (expr, operator, right_expr) in
       match comparison_right rest ast with
       | Some result -> Some result
       | None -> Some (rest, ast))
@@ -58,7 +58,7 @@ and term_right (tokens : Tokens.t list) (expr : Ast.t) :
     when Tokens.equal_token_type operator.token_type Tokens.MINUS
          || Tokens.equal_token_type operator.token_type Tokens.PLUS -> (
       let rest, right_expr = factor rest in
-      let ast = Ast.Binary (expr, operator.token_type, right_expr) in
+      let ast = Ast.Binary (expr, operator, right_expr) in
       match term_right rest ast with
       | Some result -> Some result
       | None -> Some (rest, ast))
@@ -77,7 +77,7 @@ and factor_right (tokens : Tokens.t list) (expr : Ast.t) :
     when Tokens.equal_token_type operator.token_type Tokens.STAR
          || Tokens.equal_token_type operator.token_type Tokens.SLASH -> (
       let rest, right_expr = unary rest in
-      let ast = Ast.Binary (expr, operator.token_type, right_expr) in
+      let ast = Ast.Binary (expr, operator, right_expr) in
       match factor_right rest ast with
       | Some result -> Some result
       | None -> Some (rest, ast))
@@ -89,7 +89,7 @@ and unary (tokens : Tokens.t list) : Tokens.t list * Ast.t =
     when Tokens.equal_token_type operator.token_type Tokens.BANG
          || Tokens.equal_token_type operator.token_type Tokens.MINUS ->
       let rest, right_expr = unary rest in
-      (rest, Ast.Unary (operator.token_type, right_expr))
+      (rest, Ast.Unary (operator, right_expr))
   | _ -> primary tokens
 
 and primary (tokens : Tokens.t list) : Tokens.t list * Ast.t =

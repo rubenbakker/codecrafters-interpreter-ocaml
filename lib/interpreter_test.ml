@@ -37,3 +37,19 @@ let%expect_test "plus strings" =
   Result.ok res |> Option.value_exn |> Interpreter.evaluate
   |> Interpreter.value_to_string |> Stdlib.print_endline;
   [%expect {| helloworld |}]
+
+let%expect_test "minus strings should report error" =
+  let tokens : Tokens.t list =
+    [
+      { token_type = Tokens.STRING "hello"; lexeme = "hello"; line = 1 };
+      { token_type = Tokens.MINUS; lexeme = "-"; line = 1 };
+      { token_type = Tokens.STRING "world"; lexeme = "world"; line = 1 };
+    ]
+  in
+  let res = Parser.parse tokens in
+  Result.ok res |> Option.value_exn |> Interpreter.run |> Result.error
+  |> Option.value_exn |> Interpreter.error_to_string |> Stdlib.print_endline;
+  [%expect {|
+    Operands must be numbers
+    [line 1]
+    |}]
