@@ -50,6 +50,6 @@ let number_to_string value =
 let value_to_string value =
   match value with
   | BooleanValue b -> if b then "true" else "false"
-  | NumberValue n -> Tokens.number_to_string n
+  | NumberValue n -> number_to_string n
   | StringValue s -> s
   | NilValue -> "nil"
