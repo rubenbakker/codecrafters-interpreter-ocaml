@@ -36,8 +36,12 @@ let parse_command filename =
 let evaluate_command filename =
   parse filename (fun ast ->
       match Interpreter.run ast with
-      | Ok ast -> Interpreter.value_to_string ast |> Stdlib.print_endline
-      | Error error -> Interpreter.error_to_string error |> Stdlib.print_endline)
+      | Ok ast ->
+          Interpreter.value_to_string ast |> Stdlib.print_endline;
+          0
+      | Error error ->
+          Interpreter.error_to_string error |> Stdlib.print_endline;
+          70)
 
 let () =
   if Array.length Stdlib.Sys.argv < 3 then (
