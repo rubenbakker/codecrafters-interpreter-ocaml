@@ -40,7 +40,7 @@ let evaluate_command filename =
           Interpreter.value_to_string ast |> Stdlib.print_endline;
           0
       | Error error ->
-          Interpreter.error_to_string error |> Stdlib.print_endline;
+          Interpreter.error_to_string error |> Stdlib.prerr_endline;
           70)
 
 let () =
