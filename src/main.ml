@@ -12,7 +12,7 @@ let tokenize_command filename =
   token_results |> Scanner.get_tokens |> Tokens.print_tokens;
   match errors with [] -> 0 | _ -> 65
 
-let parse_command filename =
+let parse filename ok_fn =
   let file_contents = In_channel.with_open_text filename In_channel.input_all in
   let token_results = Scanner.scan file_contents in
   let errors = token_results |> Scanner.get_errors in
@@ -21,7 +21,7 @@ let parse_command filename =
   | [] -> (
       match token_results |> Scanner.get_tokens |> Parser.parse with
       | Ok ast ->
-          Ast.to_string ast |> Stdlib.print_endline;
+          ok_fn ast |> ignore;
           0
       | Error error ->
           Stdlib.prerr_endline (Parser.format_error error);
@@ -29,6 +29,14 @@ let parse_command filename =
   | _ ->
       errors |> List.map ~f:(fun error -> Stdlib.prerr_endline error) |> ignore;
       65
+
+let parse_command filename =
+  parse filename (fun ast -> Ast.to_string ast |> Stdlib.print_endline)
+
+let evaluate_command filename =
+  parse filename (fun ast ->
+      Interpreter.evaluate ast |> Interpreter.value_to_string
+      |> Stdlib.print_endline)
 
 let () =
   if Array.length Stdlib.Sys.argv < 3 then (
@@ -43,6 +51,7 @@ let () =
     match command with
     | "tokenize" -> tokenize_command filename
     | "parse" -> parse_command filename
+    | "evaluate" -> evaluate_command filename
     | _ ->
         Stdlib.Printf.eprintf "Unknown command: %s\n" command;
         1
