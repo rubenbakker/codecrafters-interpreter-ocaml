@@ -40,6 +40,13 @@ and literal literal : value_t =
   | Ast.LiteralNil -> NilValue
   | Ast.LiteralString s -> StringValue s
 
+let number_to_string value =
+  let value = Float.to_string value in
+  let value = String.rstrip ~drop:(fun ch -> Char.(ch = '0')) value in
+  match Stdlib.String.ends_with ~suffix:"." value with
+  | true -> String.sub ~pos:0 ~len:(String.length value - 1) value
+  | false -> value
+
 let value_to_string value =
   match value with
   | BooleanValue b -> if b then "true" else "false"
