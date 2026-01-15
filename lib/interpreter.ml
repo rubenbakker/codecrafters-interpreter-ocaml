@@ -27,16 +27,16 @@ let is_equal left right =
   | NilValue, NilValue -> true
   | _, _ -> false
 
-let rec evaluate (ast : Ast.t) : value_t =
+let rec expression (ast : Ast.t) : value_t =
   match ast with
   | Ast.Unary (token_type, expr) -> unary token_type expr
   | Ast.Literal value -> literal value
-  | Ast.Grouping ast -> evaluate ast
+  | Ast.Grouping ast -> expression ast
   | Ast.Binary (left_expr, token_type, right_expr) ->
       binary left_expr token_type right_expr
 
 and binary left_expr token right_expr =
-  let left = evaluate left_expr and right = evaluate right_expr in
+  let left = expression left_expr and right = expression right_expr in
   match (token.token_type, left, right) with
   | Tokens.EQUAL_EQUAL, left, right -> BooleanValue (is_equal left right)
   | Tokens.BANG_EQUAL, left, right -> BooleanValue (not (is_equal left right))
@@ -62,7 +62,7 @@ and binary left_expr token right_expr =
       raise (Runtime_exn { token; message = "Operands must be numbers" })
 
 and unary token expr : value_t =
-  let right_value = evaluate expr in
+  let right_value = expression expr in
   match (token.token_type, right_value) with
   | Tokens.MINUS, NumberValue n -> NumberValue (n *. -1.0)
   | Tokens.MINUS, _ ->
@@ -94,5 +94,23 @@ let value_to_string value =
 let error_to_string error =
   Stdlib.Printf.sprintf "%s\n[line %d]" error.message error.token.line
 
-let run (ast : Ast.t) : (value_t, runtime_error) Result.t =
-  try Ok (evaluate ast) with Runtime_exn runtime_error -> Error runtime_error
+let rec run_program (program : Ast.program_t) : unit =
+  match program with
+  | [] -> ()
+  | stmt :: rest ->
+      statement stmt;
+      run_program rest
+
+and statement (stmt : Ast.stmt_t) : unit =
+  match stmt with
+  | Ast.PrintStmt expr ->
+      expression expr |> value_to_string |> Stdlib.print_endline
+  | Ast.ExprStmt expr -> expression expr |> value_to_string |> ignore
+
+let evaluate (ast : Ast.t) : (value_t, runtime_error) Result.t =
+  try Ok (expression ast)
+  with Runtime_exn runtime_error -> Error runtime_error
+
+let run (program : Ast.program_t) : (unit, runtime_error) Result.t =
+  try Ok (run_program program)
+  with Runtime_exn runtime_error -> Error runtime_error

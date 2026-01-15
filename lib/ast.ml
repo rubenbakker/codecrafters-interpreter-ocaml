@@ -14,6 +14,9 @@ type t =
   | Unary of Tokens.t * t
 [@@deriving compare, equal, sexp]
 
+type stmt_t = PrintStmt of t | ExprStmt of t [@@deriving compare, equal, sexp]
+type program_t = stmt_t list [@@deriving compare, equal, sexp]
+
 let token_type_to_string token_type =
   match token_type with
   | Tokens.BANG -> "!"
@@ -76,3 +79,12 @@ let rec to_string (ast : t) : string =
       Stdlib.Printf.sprintf "(%s %s)"
         (token_type_to_string operator.token_type)
         (to_string expr)
+
+let program_to_string (program : program_t) : string =
+  List.map
+    ~f:(fun stmt ->
+      match stmt with
+      | PrintStmt expr -> Stdlib.Printf.sprintf "(PRINT %s)\n" (to_string expr)
+      | ExprStmt expr -> Stdlib.Printf.sprintf "(%s)\n" (to_string expr))
+    program
+  |> String.concat_lines

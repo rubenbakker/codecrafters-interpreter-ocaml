@@ -3,8 +3,38 @@ open! Base
 type parse_error = { token : Tokens.t; message : string }
 
 exception Parse_exn of parse_error
+exception Todo_exn of string option
 
-let rec expression (tokens : Tokens.t list) = equality tokens
+let todo msg = raise (Todo_exn msg)
+
+let consume_token (tokens : Tokens.t list) ~(tt : Tokens.token_type)
+    ~error:(message : string) : Tokens.t list =
+  match tokens with
+  | { token_type; _ } :: rest when Tokens.equal_token_type tt token_type -> rest
+  | _ -> raise (Parse_exn { token = List.hd_exn tokens; message })
+
+let rec program (tokens : Tokens.t list) : (Ast.program_t, parse_error) Result.t
+    =
+  try
+    let prg = statement tokens [] in
+    Ok prg
+  with Parse_exn error -> Error error
+
+and statement (tokens : Tokens.t list) (acc : Ast.program_t) : Ast.program_t =
+  match tokens with
+  | [ { token_type = Tokens.EOF; _ } ] -> List.rev acc
+  | { token_type = Tokens.PRINT; _ } :: rest ->
+      let rest, expr = expression rest in
+      let rest =
+        consume_token rest ~tt:Tokens.SEMICOLON
+          ~error:"Expect ';' after expression."
+      in
+      statement rest (Ast.PrintStmt expr :: acc)
+  | rest ->
+      let rest, expr = expression rest in
+      statement rest (Ast.ExprStmt expr :: acc)
+
+and expression (tokens : Tokens.t list) = equality tokens
 
 and equality (tokens : Tokens.t list) : Tokens.t list * Ast.t =
   let rest, expr = comparison tokens in
@@ -16,9 +46,8 @@ and equality_right (tokens : Tokens.t list) (expr : Ast.t) :
     (Tokens.t list * Ast.t) option =
   match tokens with
   | operator :: rest
-    when Tokens.equal_token_type operator.token_type Tokens.EQUAL
-         || Tokens.equal_token_type operator.token_type Tokens.BANG_EQUAL
-         || Tokens.equal_token_type operator.token_type Tokens.EQUAL_EQUAL -> (
+    when Tokens.matches_any operator
+           [ Tokens.EQUAL; Tokens.BANG_EQUAL; Tokens.EQUAL_EQUAL ] -> (
       let rest, right_expr = comparison rest in
       let ast = Ast.Binary (expr, operator, right_expr) in
       match equality_right rest ast with
@@ -36,10 +65,13 @@ and comparison_right (tokens : Tokens.t list) (expr : Ast.t) :
     (Tokens.t list * Ast.t) option =
   match tokens with
   | operator :: rest
-    when Tokens.equal_token_type operator.token_type Tokens.GREATER
-         || Tokens.equal_token_type operator.token_type Tokens.GREATER_EQUAL
-         || Tokens.equal_token_type operator.token_type Tokens.LESS
-         || Tokens.equal_token_type operator.token_type Tokens.LESS_EQUAL -> (
+    when Tokens.matches_any operator
+           [
+             Tokens.GREATER;
+             Tokens.GREATER_EQUAL;
+             Tokens.LESS;
+             Tokens.LESS_EQUAL;
+           ] -> (
       let rest, right_expr = term rest in
       let ast = Ast.Binary (expr, operator, right_expr) in
       match comparison_right rest ast with
@@ -55,8 +87,7 @@ and term_right (tokens : Tokens.t list) (expr : Ast.t) :
     (Tokens.t list * Ast.t) option =
   match tokens with
   | operator :: rest
-    when Tokens.equal_token_type operator.token_type Tokens.MINUS
-         || Tokens.equal_token_type operator.token_type Tokens.PLUS -> (
+    when Tokens.matches_any operator [ Tokens.MINUS; Tokens.PLUS ] -> (
       let rest, right_expr = factor rest in
       let ast = Ast.Binary (expr, operator, right_expr) in
       match term_right rest ast with
@@ -74,8 +105,7 @@ and factor_right (tokens : Tokens.t list) (expr : Ast.t) :
     (Tokens.t list * Ast.t) option =
   match tokens with
   | operator :: rest
-    when Tokens.equal_token_type operator.token_type Tokens.STAR
-         || Tokens.equal_token_type operator.token_type Tokens.SLASH -> (
+    when Tokens.matches_any operator [ Tokens.STAR; Tokens.SLASH ] -> (
       let rest, right_expr = unary rest in
       let ast = Ast.Binary (expr, operator, right_expr) in
       match factor_right rest ast with
@@ -86,8 +116,7 @@ and factor_right (tokens : Tokens.t list) (expr : Ast.t) :
 and unary (tokens : Tokens.t list) : Tokens.t list * Ast.t =
   match tokens with
   | operator :: rest
-    when Tokens.equal_token_type operator.token_type Tokens.BANG
-         || Tokens.equal_token_type operator.token_type Tokens.MINUS ->
+    when Tokens.matches_any operator [ Tokens.BANG; Tokens.MINUS ] ->
       let rest, right_expr = unary rest in
       (rest, Ast.Unary (operator, right_expr))
   | _ -> primary tokens
@@ -103,25 +132,24 @@ and primary (tokens : Tokens.t list) : Tokens.t list * Ast.t =
       (rest, Ast.Literal (Ast.LiteralNumber value))
   | { token_type = Tokens.STRING value; _ } :: rest ->
       (rest, Ast.Literal (Ast.LiteralString value))
-  | { token_type = Tokens.LEFT_PAREN; _ } :: rest -> (
+  | { token_type = Tokens.LEFT_PAREN; _ } :: rest ->
       let (rest : Tokens.t list), ast = expression rest in
-      match rest with
-      | { token_type = Tokens.RIGHT_PAREN; _ } :: rest ->
-          (rest, Ast.Grouping ast)
-      | _ ->
-          raise
-            (Parse_exn
-               {
-                 token = List.hd_exn rest;
-                 message = "Expect ')' after expression.";
-               }))
+      let rest =
+        consume_token rest ~tt:Tokens.RIGHT_PAREN
+          ~error:"Expect ')' after expression."
+      in
+      (rest, Ast.Grouping ast)
   | { token_type = Tokens.EOF; _ } :: rest -> (rest, Ast.Literal Ast.LiteralNil)
   | _ ->
       raise
         (Parse_exn
            { token = List.hd_exn tokens; message = "Expect expression." })
 
-let parse (tokens : Tokens.t list) : (Ast.t, parse_error) Result.t =
+let parse_program (tokens : Tokens.t list) :
+    (Ast.program_t, parse_error) Result.t =
+  program tokens
+
+let parse_expression (tokens : Tokens.t list) : (Ast.t, parse_error) Result.t =
   try
     let _, ast = expression tokens in
     Ok ast

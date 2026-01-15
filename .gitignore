@@ -29,3 +29,4 @@ setup.log
 _opam/
 
 /dune.lock
+/dev-tools.locks

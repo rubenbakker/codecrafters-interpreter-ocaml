@@ -109,3 +109,6 @@ let to_string token =
 let print_tokens tokens =
   List.map ~f:(fun token -> Stdlib.print_endline (to_string token)) tokens
   |> ignore
+
+let matches_any (token : t) (token_types : token_type list) : bool =
+  List.exists token_types ~f:(fun tt -> equal_token_type tt token.token_type)

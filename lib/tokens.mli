@@ -48,3 +48,4 @@ val literal : t -> string option
 val to_string : t -> string
 val print_tokens : t list -> unit
 val number_to_string : float -> string
+val matches_any : t -> token_type list -> bool

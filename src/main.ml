@@ -12,14 +12,14 @@ let tokenize_command filename =
   token_results |> Scanner.get_tokens |> Tokens.print_tokens;
   match errors with [] -> 0 | _ -> 65
 
-let parse filename ok_fn =
+let parse_expression filename ok_fn =
   let file_contents = In_channel.with_open_text filename In_channel.input_all in
   let token_results = Scanner.scan file_contents in
   let errors = token_results |> Scanner.get_errors in
 
   match errors with
   | [] -> (
-      match token_results |> Scanner.get_tokens |> Parser.parse with
+      match token_results |> Scanner.get_tokens |> Parser.parse_expression with
       | Ok ast -> ok_fn ast
       | Error error ->
           Stdlib.prerr_endline (Parser.format_error error);
@@ -28,20 +28,44 @@ let parse filename ok_fn =
       errors |> List.map ~f:(fun error -> Stdlib.prerr_endline error) |> ignore;
       65
 
+let parse_program filename ok_fn =
+  let file_contents = In_channel.with_open_text filename In_channel.input_all in
+  let token_results = Scanner.scan file_contents in
+  let errors = token_results |> Scanner.get_errors in
+
+  match errors with
+  | [] -> (
+      match token_results |> Scanner.get_tokens |> Parser.parse_program with
+      | Ok program -> ok_fn program
+      | Error error ->
+          Stdlib.prerr_endline (Parser.format_error error);
+          65)
+  | _ ->
+      errors |> List.map ~f:(fun error -> Stdlib.prerr_endline error) |> ignore;
+      65
+
 let parse_command filename =
-  parse filename (fun ast ->
+  parse_expression filename (fun ast ->
       Ast.to_string ast |> Stdlib.print_endline;
       0)
 
 let evaluate_command filename =
-  parse filename (fun ast ->
-      match Interpreter.run ast with
+  parse_expression filename (fun ast ->
+      match Interpreter.evaluate ast with
       | Ok ast ->
           Interpreter.value_to_string ast |> Stdlib.print_endline;
           0
       | Error error ->
           Interpreter.error_to_string error |> Stdlib.prerr_endline;
           70)
+
+let run_command filename =
+  parse_program filename (fun program ->
+      match Interpreter.run program with
+      | Ok _ -> 0
+      | Error error ->
+          Interpreter.error_to_string error |> Stdlib.prerr_endline;
+          65)
 
 let () =
   if Array.length Stdlib.Sys.argv < 3 then (
@@ -57,6 +81,7 @@ let () =
     | "tokenize" -> tokenize_command filename
     | "parse" -> parse_command filename
     | "evaluate" -> evaluate_command filename
+    | "run" -> run_command filename
     | _ ->
         Stdlib.Printf.eprintf "Unknown command: %s\n" command;
         1
