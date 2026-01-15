@@ -1,2 +1,8 @@
-var x = 5 + 3 * 2;
-print x * 3;
+// This program declares multiple variables and
+// prints the result of arithmetic operations on
+// them
+var quz = 49;
+var world = 49;
+print quz + world;
+var baz = 49;
+print quz + world + baz;
