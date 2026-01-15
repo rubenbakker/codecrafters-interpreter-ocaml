@@ -32,6 +32,10 @@ and statement (tokens : Tokens.t list) (acc : Ast.program_t) : Ast.program_t =
       statement rest (Ast.PrintStmt expr :: acc)
   | rest ->
       let rest, expr = expression rest in
+      let rest =
+        consume_token rest ~tt:Tokens.SEMICOLON
+          ~error:"Expect ';' after expression."
+      in
       statement rest (Ast.ExprStmt expr :: acc)
 
 and expression (tokens : Tokens.t list) = equality tokens
