@@ -65,7 +65,7 @@ let run_command filename =
       | Ok _ -> 0
       | Error error ->
           Interpreter.error_to_string error |> Stdlib.prerr_endline;
-          65)
+          70)
 
 let () =
   if Array.length Stdlib.Sys.argv < 3 then (
