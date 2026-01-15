@@ -7,6 +7,10 @@ type value_t =
   | NilValue
 [@@deriving sexp, compare, equal]
 
+type environment_t = (string, value_t) Hashtbl.t
+
+let global_env : environment_t = Hashtbl.create (module String)
+
 type runtime_error = { token : Tokens.t; message : string }
 
 exception Runtime_exn of runtime_error
@@ -34,6 +38,17 @@ let rec expression (ast : Ast.t) : value_t =
   | Ast.Grouping ast -> expression ast
   | Ast.Binary (left_expr, token_type, right_expr) ->
       binary left_expr token_type right_expr
+  | Ast.Variable name -> (
+      match Hashtbl.find global_env name with
+      | Some value -> value
+      | None ->
+          raise
+            (Runtime_exn
+               {
+                 token =
+                   { token_type = Tokens.IDENTIFIER; lexeme = name; line = 99 };
+                 message = Stdlib.Printf.sprintf "Undefined variable '%s'." name;
+               }))
 
 and binary left_expr token right_expr =
   let left = expression left_expr and right = expression right_expr in
@@ -105,6 +120,8 @@ and statement (stmt : Ast.stmt_t) : unit =
   match stmt with
   | Ast.PrintStmt expr ->
       expression expr |> value_to_string |> Stdlib.print_endline
+  | Ast.VarStmt (name, expr) ->
+      Hashtbl.set global_env ~key:name ~data:(expression expr)
   | Ast.ExprStmt expr -> expression expr |> value_to_string |> ignore
 
 let evaluate (ast : Ast.t) : (value_t, runtime_error) Result.t =

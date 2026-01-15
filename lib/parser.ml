@@ -16,9 +16,32 @@ let consume_token (tokens : Tokens.t list) ~(tt : Tokens.token_type)
 let rec program (tokens : Tokens.t list) : (Ast.program_t, parse_error) Result.t
     =
   try
-    let prg = statement tokens [] in
+    let prg = declaration tokens [] in
     Ok prg
   with Parse_exn error -> Error error
+
+and declaration (tokens : Tokens.t list) (acc : Ast.program_t) : Ast.program_t =
+  match tokens with
+  | [ { token_type = Tokens.EOF; _ } ] -> List.rev acc
+  | { token_type = Tokens.VAR; _ }
+    :: { token_type = Tokens.IDENTIFIER; lexeme = name; _ }
+    :: rest -> (
+      match rest with
+      | { token_type = Tokens.EQUAL; _ } :: rest ->
+          let rest, expr = expression rest in
+          let rest =
+            consume_token rest ~tt:Tokens.SEMICOLON
+              ~error:"Expect ';' after expression."
+          in
+          statement rest (Ast.VarStmt (name, expr) :: acc)
+      | _ ->
+          let rest =
+            consume_token rest ~tt:Tokens.SEMICOLON
+              ~error:"Expect ';' after expression."
+          in
+          statement rest (Ast.VarStmt (name, Ast.Literal Ast.LiteralNil) :: acc)
+      )
+  | rest -> statement rest acc
 
 and statement (tokens : Tokens.t list) (acc : Ast.program_t) : Ast.program_t =
   match tokens with
@@ -136,6 +159,8 @@ and primary (tokens : Tokens.t list) : Tokens.t list * Ast.t =
       (rest, Ast.Literal (Ast.LiteralNumber value))
   | { token_type = Tokens.STRING value; _ } :: rest ->
       (rest, Ast.Literal (Ast.LiteralString value))
+  | { token_type = Tokens.IDENTIFIER; lexeme = name; _ } :: rest ->
+      (rest, Ast.Variable name)
   | { token_type = Tokens.LEFT_PAREN; _ } :: rest ->
       let (rest : Tokens.t list), ast = expression rest in
       let rest =

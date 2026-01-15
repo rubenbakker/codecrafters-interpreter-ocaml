@@ -87,3 +87,12 @@ let%expect_test "parse statement with expression" =
   |> Scanner.get_tokens |> Parser.parse_program |> Result.ok |> Option.value_exn
   |> Ast.program_to_string |> Stdlib.print_endline;
   [%expect {| (PRINT (+ 5.0 2.0)) |}]
+
+let%expect_test "variable " =
+  Scanner.scan "var n = 5 + 2; print n;"
+  |> Scanner.get_tokens |> Parser.parse_program |> Result.ok |> Option.value_exn
+  |> Ast.program_to_string |> Stdlib.print_endline;
+  [%expect {|
+    (VAR n = (+ 5.0 2.0))
+    (PRINT (VAR n))
+    |}]
