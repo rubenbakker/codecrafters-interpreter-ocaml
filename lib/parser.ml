@@ -33,7 +33,7 @@ and declaration (tokens : Tokens.t list) (acc : Ast.program_t) : Ast.program_t =
             consume_token rest ~tt:Tokens.SEMICOLON
               ~error:"Expect ';' after expression."
           in
-          statement rest (Ast.VarStmt (name, expr) :: acc)
+          declaration rest (Ast.VarStmt (name, expr) :: acc)
       | _ ->
           let rest =
             consume_token rest ~tt:Tokens.SEMICOLON
