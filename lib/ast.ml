@@ -15,7 +15,11 @@ type t =
   | Unary of Tokens.t * t
 [@@deriving compare, equal, sexp]
 
-type stmt_t = PrintStmt of t | VarStmt of string * t | ExprStmt of t
+type stmt_t =
+  | Block of stmt_t list
+  | PrintStmt of t
+  | VarStmt of string * t
+  | ExprStmt of t
 [@@deriving compare, equal, sexp]
 
 type program_t = stmt_t list [@@deriving compare, equal, sexp]
@@ -84,13 +88,16 @@ let rec to_string (ast : t) : string =
         (token_type_to_string operator.token_type)
         (to_string expr)
 
-let program_to_string (program : program_t) : string =
+let rec program_to_string (program : program_t) : string =
   List.map
     ~f:(fun stmt ->
       match stmt with
-      | PrintStmt expr -> Stdlib.Printf.sprintf "(PRINT %s)\n" (to_string expr)
+      | Block stmts ->
+          Stdlib.Printf.sprintf "(BLOCK\n%s)"
+            (String.rstrip (program_to_string stmts))
       | VarStmt (name, init_expr) ->
           Stdlib.Printf.sprintf "(VAR %s = %s)" name (to_string init_expr)
+      | PrintStmt expr -> Stdlib.Printf.sprintf "(PRINT %s)\n" (to_string expr)
       | ExprStmt expr -> Stdlib.Printf.sprintf "(%s)\n" (to_string expr))
     program
   |> String.concat_lines

@@ -8,9 +8,10 @@ let%expect_test "unary expression" =
     ]
   in
   let res = Parser.parse_expression tokens in
-  Result.ok res |> Option.value_exn |> Interpreter.evaluate |> Result.ok
-  |> Option.value_exn |> Interpreter.sexp_of_value_t |> Sexp.to_string_hum
-  |> Stdlib.print_endline;
+  Result.ok res |> Option.value_exn
+  |> Interpreter.evaluate (Interpreter.create_environment None)
+  |> Result.ok |> Option.value_exn |> Interpreter.sexp_of_value_t
+  |> Sexp.to_string_hum |> Stdlib.print_endline;
   [%expect {| (BooleanValue false) |}]
 
 let%expect_test "plus numbers" =
@@ -22,8 +23,10 @@ let%expect_test "plus numbers" =
     ]
   in
   let res = Parser.parse_expression tokens in
-  Result.ok res |> Option.value_exn |> Interpreter.evaluate |> Result.ok
-  |> Option.value_exn |> Interpreter.value_to_string |> Stdlib.print_endline;
+  Result.ok res |> Option.value_exn
+  |> Interpreter.evaluate (Interpreter.create_environment None)
+  |> Result.ok |> Option.value_exn |> Interpreter.value_to_string
+  |> Stdlib.print_endline;
   [%expect {| 11 |}]
 
 let%expect_test "plus strings" =
@@ -35,8 +38,10 @@ let%expect_test "plus strings" =
     ]
   in
   let res = Parser.parse_expression tokens in
-  Result.ok res |> Option.value_exn |> Interpreter.evaluate |> Result.ok
-  |> Option.value_exn |> Interpreter.value_to_string |> Stdlib.print_endline;
+  Result.ok res |> Option.value_exn
+  |> Interpreter.evaluate (Interpreter.create_environment None)
+  |> Result.ok |> Option.value_exn |> Interpreter.value_to_string
+  |> Stdlib.print_endline;
   [%expect {| helloworld |}]
 
 let%expect_test "minus strings should report error" =
@@ -48,8 +53,10 @@ let%expect_test "minus strings should report error" =
     ]
   in
   let res = Parser.parse_expression tokens in
-  Result.ok res |> Option.value_exn |> Interpreter.evaluate |> Result.error
-  |> Option.value_exn |> Interpreter.error_to_string |> Stdlib.print_endline;
+  Result.ok res |> Option.value_exn
+  |> Interpreter.evaluate (Interpreter.create_environment None)
+  |> Result.error |> Option.value_exn |> Interpreter.error_to_string
+  |> Stdlib.print_endline;
   [%expect {|
     Operands must be numbers
     [line 1]
@@ -67,8 +74,8 @@ let%expect_test "print statements" =
       { token_type = Tokens.EOF; lexeme = ""; line = 2 };
     ]
   in
-  Parser.parse_program tokens
-  |> Result.ok |> Option.value_exn |> Interpreter.run_program;
+  let program = Parser.parse_program tokens |> Result.ok |> Option.value_exn in
+  Interpreter.run_program program (Interpreter.create_environment None);
   [%expect {|
     hello
     world
