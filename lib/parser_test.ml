@@ -125,7 +125,9 @@ let%expect_test "assignments" =
   [%expect
     {|
     (VAR n = 5.0)
-    (ASSIGN n = 7.0)
-    (PRINT (VAR n)))
+    ((ASSIGN n (ASSIGN p 7.0)))
+
+    (PRINT (ASSIGN n 3.0))
+
     (PRINT (VAR p))
     |}]

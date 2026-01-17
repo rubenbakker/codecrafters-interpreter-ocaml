@@ -1,7 +1,8 @@
-var quz;
-quz = 1;
-print quz;
-// The assignment operator should return
-// the value that was assigned
-print quz = 2;
-print quz;
+{
+    var hello = 49;
+    var bar = 49;
+    {
+        print hello + bar;
+    // Missing closing curly brace
+    // Expect compile error
+}

@@ -48,7 +48,6 @@ and statement (tokens : Tokens.t list) (acc : Ast.program_t) :
     Tokens.t list * Ast.program_t =
   match tokens with
   | [ { token_type = Tokens.EOF; _ } ] -> ([], List.rev acc)
-  | { token_type = Tokens.RIGHT_BRACE; _ } :: rest -> (rest, List.rev acc)
   | { token_type = Tokens.PRINT; _ } :: rest ->
       let rest, expr = expression rest in
       let rest =
@@ -58,7 +57,11 @@ and statement (tokens : Tokens.t list) (acc : Ast.program_t) :
       declaration rest (Ast.PrintStmt expr :: acc)
   | { token_type = Tokens.LEFT_BRACE; _ } :: rest ->
       let rest, stmts = declaration rest [] in
-      declaration rest (Ast.Block stmts :: acc)
+      let rest =
+        consume_token rest ~tt:Tokens.RIGHT_BRACE
+          ~error:"Expect '}' after block."
+      in
+      declaration rest (Ast.Block (List.rev stmts) :: acc)
   | rest ->
       let rest, expr = expression rest in
       let rest =
