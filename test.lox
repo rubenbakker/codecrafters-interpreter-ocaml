@@ -1,1 +1,7 @@
-@(()
+var quz;
+quz = 1;
+print quz;
+// The assignment operator should return
+// the value that was assigned
+print quz = 2;
+print quz;

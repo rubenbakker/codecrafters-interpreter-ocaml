@@ -91,8 +91,8 @@ and equality_right (tokens : Tokens.t list) (expr : Ast.t) :
     (Tokens.t list * Ast.t) option =
   match tokens with
   | operator :: rest
-    when Tokens.matches_any operator
-           [ Tokens.EQUAL; Tokens.BANG_EQUAL; Tokens.EQUAL_EQUAL ] -> (
+    when Tokens.matches_any operator [ Tokens.BANG_EQUAL; Tokens.EQUAL_EQUAL ]
+    -> (
       let rest, right_expr = comparison rest in
       let ast = Ast.Binary (expr, operator, right_expr) in
       match equality_right rest ast with
