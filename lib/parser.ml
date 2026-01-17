@@ -191,7 +191,7 @@ and primary (tokens : Tokens.t list) : Tokens.t list * Ast.t =
         (Parse_exn
            {
              token = { token_type = Tokens.TRUE; lexeme = "}"; line = 99 };
-             message = "Expect '}' after block.";
+             message = "Expect expression.";
            })
   | _ ->
       raise
