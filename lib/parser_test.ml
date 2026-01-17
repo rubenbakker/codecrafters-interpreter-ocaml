@@ -113,3 +113,19 @@ let%expect_test "variable scope" =
     (PRINT (VAR n)))
     (PRINT (VAR n))
     |}]
+
+let%expect_test "assignments" =
+  (match
+     Scanner.scan "var n = 5; n = p = 7; print n = 3; print p;"
+     |> Scanner.get_tokens |> Parser.parse_program
+   with
+  | Ok r -> Ast.program_to_string r |> Stdlib.print_endline
+  | Error e -> Parser.format_error e |> Stdlib.print_endline);
+
+  [%expect
+    {|
+    (VAR n = 5.0)
+    (ASSIGN n = 7.0)
+    (PRINT (VAR n)))
+    (PRINT (VAR p))
+    |}]
