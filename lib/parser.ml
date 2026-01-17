@@ -67,7 +67,19 @@ and statement (tokens : Tokens.t list) (acc : Ast.program_t) :
       in
       declaration rest (Ast.ExprStmt expr :: acc)
 
-and expression (tokens : Tokens.t list) = equality tokens
+and expression (tokens : Tokens.t list) = assignment tokens
+
+and assignment (tokens : Tokens.t list) =
+  let rest, expr = equality tokens in
+  match rest with
+  | ({ token_type = Tokens.EQUAL; _ } as token) :: rest -> (
+      let rest, value = assignment rest in
+      match expr with
+      | Ast.Variable name ->
+          (rest, Ast.Assign ({ token with lexeme = name }, value))
+      | _ -> raise (Parse_exn { token; message = "Invalid assignment target." })
+      )
+  | _ -> (rest, expr)
 
 and equality (tokens : Tokens.t list) : Tokens.t list * Ast.t =
   let rest, expr = comparison tokens in
