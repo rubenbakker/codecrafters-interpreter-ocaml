@@ -38,9 +38,26 @@ let rec get_var_ ~(token : Tokens.t) (env : environment option) : value_t =
 let get_var ~(token : Tokens.t) (env : environment) : value_t =
   get_var_ ~token (Some env)
 
+let rec assign_var_ ~(token : Tokens.t) ~(value : value_t)
+    (env : environment option) =
+  let name = token.lexeme in
+  match env with
+  | None ->
+      raise
+        (Runtime_exn
+           {
+             token;
+             message = Stdlib.Printf.sprintf "Undefined variable '%s'" name;
+           })
+  | Some env -> (
+      match Hashtbl.find env.vars token.lexeme with
+      | None -> assign_var_ ~token ~value env.parent
+      | Some _ ->
+          Hashtbl.set env.vars ~key:token.lexeme ~data:value;
+          value)
+
 let assign_var ~(token : Tokens.t) ~(value : value_t) (env : environment) =
-  Hashtbl.set env.vars ~key:token.lexeme ~data:value;
-  value
+  assign_var_ ~token ~value (Some env)
 
 let is_truthy value =
   match value with
