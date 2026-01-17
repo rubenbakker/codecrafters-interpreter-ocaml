@@ -51,7 +51,7 @@ let parse_command filename =
 
 let evaluate_command filename =
   parse_expression filename (fun ast ->
-      match Interpreter.evaluate ast with
+      match Interpreter.evaluate (Interpreter.create_environment None) ast with
       | Ok ast ->
           Interpreter.value_to_string ast |> Stdlib.print_endline;
           0

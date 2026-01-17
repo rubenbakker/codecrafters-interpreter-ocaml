@@ -16,13 +16,14 @@ let consume_token (tokens : Tokens.t list) ~(tt : Tokens.token_type)
 let rec program (tokens : Tokens.t list) : (Ast.program_t, parse_error) Result.t
     =
   try
-    let prg = declaration tokens [] in
+    let _, prg = declaration tokens [] in
     Ok prg
   with Parse_exn error -> Error error
 
-and declaration (tokens : Tokens.t list) (acc : Ast.program_t) : Ast.program_t =
+and declaration (tokens : Tokens.t list) (acc : Ast.program_t) :
+    Tokens.t list * Ast.program_t =
   match tokens with
-  | [ { token_type = Tokens.EOF; _ } ] -> List.rev acc
+  | [ { token_type = Tokens.EOF; _ } ] -> ([], List.rev acc)
   | { token_type = Tokens.VAR; _ }
     :: { token_type = Tokens.IDENTIFIER; lexeme = name; _ }
     :: rest -> (
@@ -43,9 +44,11 @@ and declaration (tokens : Tokens.t list) (acc : Ast.program_t) : Ast.program_t =
             (Ast.VarStmt (name, Ast.Literal Ast.LiteralNil) :: acc))
   | rest -> statement rest acc
 
-and statement (tokens : Tokens.t list) (acc : Ast.program_t) : Ast.program_t =
+and statement (tokens : Tokens.t list) (acc : Ast.program_t) :
+    Tokens.t list * Ast.program_t =
   match tokens with
-  | [ { token_type = Tokens.EOF; _ } ] -> List.rev acc
+  | [ { token_type = Tokens.EOF; _ } ] -> ([], List.rev acc)
+  | { token_type = Tokens.RIGHT_BRACE; _ } :: rest -> (rest, List.rev acc)
   | { token_type = Tokens.PRINT; _ } :: rest ->
       let rest, expr = expression rest in
       let rest =
@@ -53,6 +56,9 @@ and statement (tokens : Tokens.t list) (acc : Ast.program_t) : Ast.program_t =
           ~error:"Expect ';' after expression."
       in
       declaration rest (Ast.PrintStmt expr :: acc)
+  | { token_type = Tokens.LEFT_BRACE; _ } :: rest ->
+      let rest, stmts = declaration rest [] in
+      declaration rest (Ast.Block stmts :: acc)
   | rest ->
       let rest, expr = expression rest in
       let rest =
@@ -61,7 +67,19 @@ and statement (tokens : Tokens.t list) (acc : Ast.program_t) : Ast.program_t =
       in
       declaration rest (Ast.ExprStmt expr :: acc)
 
-and expression (tokens : Tokens.t list) = equality tokens
+and expression (tokens : Tokens.t list) = assignment tokens
+
+and assignment (tokens : Tokens.t list) =
+  let rest, expr = equality tokens in
+  match rest with
+  | ({ token_type = Tokens.EQUAL; _ } as token) :: rest -> (
+      let rest, value = assignment rest in
+      match expr with
+      | Ast.Variable name ->
+          (rest, Ast.Assign ({ token with lexeme = name }, value))
+      | _ -> raise (Parse_exn { token; message = "Invalid assignment target." })
+      )
+  | _ -> (rest, expr)
 
 and equality (tokens : Tokens.t list) : Tokens.t list * Ast.t =
   let rest, expr = comparison tokens in

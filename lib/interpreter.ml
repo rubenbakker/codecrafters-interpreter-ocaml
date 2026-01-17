@@ -7,14 +7,40 @@ type value_t =
   | NilValue
 [@@deriving sexp, compare, equal]
 
-type environment_t = (string, value_t) Hashtbl.t
-
-let global_env : environment_t = Hashtbl.create (module String)
-
+type environment_vars = (string, value_t) Hashtbl.t
+type environment = { parent : environment option; vars : environment_vars }
 type runtime_error = { token : Tokens.t; message : string }
 
 exception Runtime_exn of runtime_error
 exception Notimplemented
+
+let create_environment (parent : environment option) : environment =
+  { parent; vars = Hashtbl.create (module String) }
+
+let define_var ~(name : string) ~(value : value_t) (env : environment) =
+  Hashtbl.set env.vars ~key:name ~data:value
+
+let rec get_var_ ~(token : Tokens.t) (env : environment option) : value_t =
+  let name = token.lexeme in
+  match env with
+  | None ->
+      raise
+        (Runtime_exn
+           {
+             token;
+             message = Stdlib.Printf.sprintf "Undefined variable '%s'" name;
+           })
+  | Some env -> (
+      match Hashtbl.find env.vars token.lexeme with
+      | None -> get_var_ ~token env.parent
+      | Some v -> v)
+
+let get_var ~(token : Tokens.t) (env : environment) : value_t =
+  get_var_ ~token (Some env)
+
+let assign_var ~(token : Tokens.t) ~(value : value_t) (env : environment) =
+  Hashtbl.set env.vars ~key:token.lexeme ~data:value;
+  value
 
 let is_truthy value =
   match value with
@@ -31,27 +57,23 @@ let is_equal left right =
   | NilValue, NilValue -> true
   | _, _ -> false
 
-let rec expression (ast : Ast.t) : value_t =
+let rec expression (ast : Ast.t) (env : environment) : value_t =
   match ast with
-  | Ast.Unary (token_type, expr) -> unary token_type expr
+  | Ast.Assign (var, expr) ->
+      assign_var ~token:var ~value:(expression expr env) env
+  | Ast.Unary (token_type, expr) -> unary token_type expr env
   | Ast.Literal value -> literal value
-  | Ast.Grouping ast -> expression ast
+  | Ast.Grouping ast -> expression ast env
   | Ast.Binary (left_expr, token_type, right_expr) ->
-      binary left_expr token_type right_expr
-  | Ast.Variable name -> (
-      match Hashtbl.find global_env name with
-      | Some value -> value
-      | None ->
-          raise
-            (Runtime_exn
-               {
-                 token =
-                   { token_type = Tokens.IDENTIFIER; lexeme = name; line = 99 };
-                 message = Stdlib.Printf.sprintf "Undefined variable '%s'." name;
-               }))
+      binary left_expr token_type right_expr env
+  | Ast.Variable name ->
+      let token : Tokens.t =
+        { token_type = Tokens.IDENTIFIER; lexeme = name; line = 99 }
+      in
+      get_var ~token env
 
-and binary left_expr token right_expr =
-  let left = expression left_expr and right = expression right_expr in
+and binary left_expr token right_expr env =
+  let left = expression left_expr env and right = expression right_expr env in
   match (token.token_type, left, right) with
   | Tokens.EQUAL_EQUAL, left, right -> BooleanValue (is_equal left right)
   | Tokens.BANG_EQUAL, left, right -> BooleanValue (not (is_equal left right))
@@ -76,8 +98,8 @@ and binary left_expr token right_expr =
   | _, _, _ ->
       raise (Runtime_exn { token; message = "Operands must be numbers" })
 
-and unary token expr : value_t =
-  let right_value = expression expr in
+and unary token expr env : value_t =
+  let right_value = expression expr env in
   match (token.token_type, right_value) with
   | Tokens.MINUS, NumberValue n -> NumberValue (n *. -1.0)
   | Tokens.MINUS, _ ->
@@ -109,25 +131,27 @@ let value_to_string value =
 let error_to_string error =
   Stdlib.Printf.sprintf "%s\n[line %d]" error.message error.token.line
 
-let rec run_program (program : Ast.program_t) : unit =
+let rec run_program (program : Ast.program_t) (env : environment) : unit =
   match program with
   | [] -> ()
   | stmt :: rest ->
-      statement stmt;
-      run_program rest
+      statement stmt env;
+      run_program rest env
 
-and statement (stmt : Ast.stmt_t) : unit =
+and statement (stmt : Ast.stmt_t) (env : environment) : unit =
   match stmt with
+  | Ast.Block stmts -> run_program stmts (create_environment (Some env))
   | Ast.PrintStmt expr ->
-      expression expr |> value_to_string |> Stdlib.print_endline
+      expression expr env |> value_to_string |> Stdlib.print_endline
   | Ast.VarStmt (name, expr) ->
-      Hashtbl.set global_env ~key:name ~data:(expression expr)
-  | Ast.ExprStmt expr -> expression expr |> value_to_string |> ignore
+      define_var ~name ~value:(expression expr env) env
+  | Ast.ExprStmt expr -> expression expr env |> value_to_string |> ignore
 
-let evaluate (ast : Ast.t) : (value_t, runtime_error) Result.t =
-  try Ok (expression ast)
+let evaluate (env : environment) (ast : Ast.t) :
+    (value_t, runtime_error) Result.t =
+  try Ok (expression ast env)
   with Runtime_exn runtime_error -> Error runtime_error
 
 let run (program : Ast.program_t) : (unit, runtime_error) Result.t =
-  try Ok (run_program program)
+  try Ok (create_environment None |> run_program program)
   with Runtime_exn runtime_error -> Error runtime_error

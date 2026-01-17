@@ -9,13 +9,18 @@ type literal_t =
 
 type t =
   | Binary of t * Tokens.t * t
+  | Assign of Tokens.t * t
   | Grouping of t
   | Literal of literal_t
   | Variable of string
   | Unary of Tokens.t * t
 [@@deriving compare, equal, sexp]
 
-type stmt_t = PrintStmt of t | VarStmt of string * t | ExprStmt of t
+type stmt_t =
+  | Block of stmt_t list
+  | PrintStmt of t
+  | VarStmt of string * t
+  | ExprStmt of t
 [@@deriving compare, equal, sexp]
 
 type program_t = stmt_t list [@@deriving compare, equal, sexp]
@@ -76,7 +81,9 @@ let rec to_string (ast : t) : string =
       Stdlib.Printf.sprintf "(%s %s %s)"
         (token_type_to_string operator.token_type)
         (to_string left_expr) (to_string right_expr)
-  | Grouping expr -> Stdlib.Printf.sprintf "(group %s)" (to_string expr)
+  | Assign (name, expr) ->
+      Stdlib.Printf.sprintf "(ASSIGN %s %s)" name.lexeme (to_string expr)
+  | Grouping expr -> Stdlib.Printf.sprintf "(GROUP %s)" (to_string expr)
   | Literal value -> literal_to_string value
   | Variable name -> Stdlib.Printf.sprintf "(VAR %s)" name
   | Unary (operator, expr) ->
@@ -84,13 +91,16 @@ let rec to_string (ast : t) : string =
         (token_type_to_string operator.token_type)
         (to_string expr)
 
-let program_to_string (program : program_t) : string =
+let rec program_to_string (program : program_t) : string =
   List.map
     ~f:(fun stmt ->
       match stmt with
-      | PrintStmt expr -> Stdlib.Printf.sprintf "(PRINT %s)\n" (to_string expr)
+      | Block stmts ->
+          Stdlib.Printf.sprintf "(BLOCK\n%s)"
+            (String.rstrip (program_to_string stmts))
       | VarStmt (name, init_expr) ->
           Stdlib.Printf.sprintf "(VAR %s = %s)" name (to_string init_expr)
+      | PrintStmt expr -> Stdlib.Printf.sprintf "(PRINT %s)\n" (to_string expr)
       | ExprStmt expr -> Stdlib.Printf.sprintf "(%s)\n" (to_string expr))
     program
   |> String.concat_lines
