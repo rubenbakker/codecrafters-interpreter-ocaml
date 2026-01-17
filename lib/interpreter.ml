@@ -38,8 +38,9 @@ let rec get_var_ ~(token : Tokens.t) (env : environment option) : value_t =
 let get_var ~(token : Tokens.t) (env : environment) : value_t =
   get_var_ ~token (Some env)
 
-let set_var ~(token : Tokens.t) ~(value : value_t) (env : environment) =
-  Hashtbl.set env.vars ~key:token.lexeme ~data:value
+let assign_var ~(token : Tokens.t) ~(value : value_t) (env : environment) =
+  Hashtbl.set env.vars ~key:token.lexeme ~data:value;
+  value
 
 let is_truthy value =
   match value with
@@ -58,6 +59,8 @@ let is_equal left right =
 
 let rec expression (ast : Ast.t) (env : environment) : value_t =
   match ast with
+  | Ast.Assign (var, expr) ->
+      assign_var ~token:var ~value:(expression expr env) env
   | Ast.Unary (token_type, expr) -> unary token_type expr env
   | Ast.Literal value -> literal value
   | Ast.Grouping ast -> expression ast env
