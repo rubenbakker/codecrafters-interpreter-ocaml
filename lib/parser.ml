@@ -186,7 +186,6 @@ and primary (tokens : Tokens.t list) : Tokens.t list * Ast.t =
           ~error:"Expect ')' after expression."
       in
       (rest, Ast.Grouping ast)
-  | { token_type = Tokens.EOF; _ } :: rest -> (rest, Ast.Literal Ast.LiteralNil)
   | [] ->
       raise
         (Parse_exn
