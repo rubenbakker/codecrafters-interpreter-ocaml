@@ -187,6 +187,13 @@ and primary (tokens : Tokens.t list) : Tokens.t list * Ast.t =
       in
       (rest, Ast.Grouping ast)
   | { token_type = Tokens.EOF; _ } :: rest -> (rest, Ast.Literal Ast.LiteralNil)
+  | [] ->
+      raise
+        (Parse_exn
+           {
+             token = { token_type = Tokens.TRUE; lexeme = "}"; line = 99 };
+             message = "Expect '}' after block.";
+           })
   | _ ->
       raise
         (Parse_exn
