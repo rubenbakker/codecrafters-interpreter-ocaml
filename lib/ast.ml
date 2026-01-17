@@ -83,7 +83,7 @@ let rec to_string (ast : t) : string =
         (to_string left_expr) (to_string right_expr)
   | Assign (name, expr) ->
       Stdlib.Printf.sprintf "(ASSIGN %s %s)" name.lexeme (to_string expr)
-  | Grouping expr -> Stdlib.Printf.sprintf "(GROUP %s)" (to_string expr)
+  | Grouping expr -> Stdlib.Printf.sprintf "(group %s)" (to_string expr)
   | Literal value -> literal_to_string value
   | Variable name -> Stdlib.Printf.sprintf "(VAR %s)" name
   | Unary (operator, expr) ->
