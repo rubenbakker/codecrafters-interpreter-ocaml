@@ -1,3 +1,12 @@
-// This should print the string if the condition
-// evaluates to True
-if (true) print "baz"; else print "gaga";
+// This program tests whether the assignment
+// operation returns the value assigned.
+// The if condition should evaluate to true and
+// the inner boolean expression must be printed.
+// So, in this case the if condition evaluates to
+//true and prints the inner boolean expression
+var a = false;
+print "hello";
+print a;
+if (true) print a;
+//  print (a == true);
+

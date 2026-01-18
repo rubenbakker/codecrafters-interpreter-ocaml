@@ -65,7 +65,7 @@ and statement (tokens : Tokens.t list) (acc : Ast.program_t) :
             (rest, Some stmt)
         | _ -> (rest, None)
       in
-      (rest, Ast.IfStmt (cond, when_branch, else_branch) :: acc)
+      declaration rest (Ast.IfStmt (cond, when_branch, else_branch) :: acc)
   | ({ token_type = Tokens.IF; _ } as token) :: _ ->
       raise (Parse_exn { token; message = "Expect '(' after 'if'." })
   | { token_type = Tokens.PRINT; _ } :: rest ->

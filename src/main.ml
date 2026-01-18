@@ -59,6 +59,11 @@ let evaluate_command filename =
           Interpreter.error_to_string error |> Stdlib.prerr_endline;
           70)
 
+let parse_program_command filename =
+  parse_program filename (fun program ->
+      Stdlib.print_endline (Ast.program_to_string program);
+      0)
+
 let run_command filename =
   parse_program filename (fun program ->
       match Interpreter.run program with
@@ -80,6 +85,7 @@ let () =
     match command with
     | "tokenize" -> tokenize_command filename
     | "parse" -> parse_command filename
+    | "parse_program" -> parse_program_command filename
     | "evaluate" -> evaluate_command filename
     | "run" -> run_command filename
     | _ ->
