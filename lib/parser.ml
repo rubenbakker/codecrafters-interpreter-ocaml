@@ -53,6 +53,10 @@ and statement (tokens : Tokens.t list) (acc : Ast.program_t) :
     :: { token_type = Tokens.LEFT_PAREN; _ }
     :: rest ->
       let rest, cond = expression rest in
+      let rest =
+        consume_token rest ~tt:Tokens.RIGHT_PAREN
+          ~error:"Expect ')' after if condition."
+      in
       let rest, when_branch = statement rest acc in
       let rest, else_branch =
         match rest with

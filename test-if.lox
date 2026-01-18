@@ -1,0 +1,3 @@
+// This should print the string if the condition
+// evaluates to True
+if (true) print "baz"; else print "gaga";
