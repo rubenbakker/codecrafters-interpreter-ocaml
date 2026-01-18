@@ -163,6 +163,13 @@ and statement (stmt : Ast.stmt_t) (env : environment) : unit =
   | Ast.VarStmt (name, expr) ->
       define_var ~name ~value:(expression expr env) env
   | Ast.ExprStmt expr -> expression expr env |> value_to_string |> ignore
+  | Ast.IfStmt (cond, when_stmt, else_stmt) -> (
+      match expression cond env |> is_truthy with
+      | true -> run_program when_stmt env
+      | false -> (
+          match else_stmt with
+          | Some else_stmt -> run_program else_stmt env
+          | None -> ()))
 
 let evaluate (env : environment) (ast : Ast.t) :
     (value_t, runtime_error) Result.t =
