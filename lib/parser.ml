@@ -49,6 +49,25 @@ and statement (tokens : Tokens.t list) (acc : Ast.program_t) :
   match tokens with
   | [ { token_type = Tokens.EOF; _ } ] -> ([], List.rev acc)
   | { token_type = Tokens.RIGHT_BRACE; _ } :: rest -> (rest, List.rev acc)
+  | { token_type = Tokens.IF; _ }
+    :: { token_type = Tokens.LEFT_PAREN; _ }
+    :: rest ->
+      let rest, cond = expression rest in
+      let rest =
+        consume_token rest ~tt:Tokens.RIGHT_PAREN
+          ~error:"Expect ')' after if condition."
+      in
+      let rest, when_branch = statement rest acc in
+      let rest, else_branch =
+        match rest with
+        | { token_type = Tokens.ELSE; _ } :: rest ->
+            let rest, stmt = statement rest acc in
+            (rest, Some stmt)
+        | _ -> (rest, None)
+      in
+      declaration rest (Ast.IfStmt (cond, when_branch, else_branch) :: acc)
+  | ({ token_type = Tokens.IF; _ } as token) :: _ ->
+      raise (Parse_exn { token; message = "Expect '(' after 'if'." })
   | { token_type = Tokens.PRINT; _ } :: rest ->
       let rest, expr = expression rest in
       let rest =
@@ -190,7 +209,8 @@ and primary (tokens : Tokens.t list) : Tokens.t list * Ast.t =
       raise
         (Parse_exn
            {
-             token = { token_type = Tokens.TRUE; lexeme = "}"; line = 99 };
+             token =
+               { token_type = Tokens.RIGHT_BRACE; lexeme = "}"; line = 99 };
              message = "Expect expression.";
            })
   | _ ->

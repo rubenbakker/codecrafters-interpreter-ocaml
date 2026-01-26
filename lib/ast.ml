@@ -18,6 +18,7 @@ type t =
 
 type stmt_t =
   | Block of stmt_t list
+  | IfStmt of t * stmt_t list * stmt_t list option
   | PrintStmt of t
   | VarStmt of string * t
   | ExprStmt of t
@@ -98,6 +99,17 @@ let rec program_to_string (program : program_t) : string =
       | Block stmts ->
           Stdlib.Printf.sprintf "(BLOCK\n%s)"
             (String.rstrip (program_to_string stmts))
+      | IfStmt (cond, when_branch, else_branch) ->
+          let else_str =
+            match else_branch with
+            | Some else_branch ->
+                Stdlib.Printf.sprintf "(ELSE %s)"
+                  (program_to_string else_branch)
+            | None -> ""
+          in
+          Stdlib.Printf.sprintf "(IF (%s) %s%s)" (to_string cond)
+            (program_to_string when_branch)
+            else_str
       | VarStmt (name, init_expr) ->
           Stdlib.Printf.sprintf "(VAR %s = %s)" name (to_string init_expr)
       | PrintStmt expr -> Stdlib.Printf.sprintf "(PRINT %s)\n" (to_string expr)
