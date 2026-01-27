@@ -156,4 +156,33 @@ if (!isAdult) { print "not eligible for voting"; }
   | Error e -> Parser.format_error e |> Stdlib.print_endline);
 
   [%expect {|
+    ((VarStmt stage (Literal (LiteralString unknown)))
+     (PrintStmt (Literal (LiteralString 1)))
+     (VarStmt age (Literal (LiteralNumber 45)))
+     (IfStmt
+      (Binary (Variable age) ((token_type LESS) (lexeme <) (line 7))
+       (Literal (LiteralNumber 18)))
+      (Block
+       ((ExprStmt
+         (Assign ((token_type EQUAL) (lexeme stage) (line 7))
+          (Literal (LiteralString child))))))
+      ())
+     (IfStmt
+      (Binary (Variable age) ((token_type GREATER_EQUAL) (lexeme >=) (line 8))
+       (Literal (LiteralNumber 18)))
+      (Block
+       ((ExprStmt
+         (Assign ((token_type EQUAL) (lexeme stage) (line 8))
+          (Literal (LiteralString adult))))))
+      ())
+     (PrintStmt (Variable stage))
+     (PrintStmt (Literal (LiteralString "2 after stage")))
+     (VarStmt isAdult
+      (Binary (Variable age) ((token_type GREATER_EQUAL) (lexeme >=) (line 11))
+       (Literal (LiteralNumber 18))))
+     (IfStmt (Variable isAdult)
+      (Block ((PrintStmt (Literal (LiteralString "eligible for voting"))))) ())
+     (IfStmt (Unary ((token_type BANG) (lexeme !) (line 13)) (Variable isAdult))
+      (Block ((PrintStmt (Literal (LiteralString "not eligible for voting")))))
+      ()))
     |}]
