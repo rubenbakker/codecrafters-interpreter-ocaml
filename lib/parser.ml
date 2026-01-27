@@ -55,74 +55,19 @@ and statement (tokens : Tokens.t list) : Tokens.t list * Ast.stmt_t =
   | { token_type = Tokens.IF; _ }
     :: { token_type = Tokens.LEFT_PAREN; _ }
     :: rest ->
-      let rest, cond = expression rest in
-      let rest =
-        consume_token rest ~tt:Tokens.RIGHT_PAREN
-          ~error:"Expect ')' after if condition."
-      in
-      let rest, when_branch = statement rest in
-      let rest, else_branch =
-        match rest with
-        | { token_type = Tokens.ELSE; _ } :: rest ->
-            let rest, stmt = statement rest in
-            (rest, Some stmt)
-        | _ -> (rest, None)
-      in
-      (rest, Ast.IfStmt (cond, when_branch, else_branch))
+      if_stmt rest
   | ({ token_type = Tokens.IF; _ } as token) :: _ ->
       raise (Parse_exn { token; message = "Expect '(' after 'if'." })
   | { token_type = Tokens.WHILE; _ }
     :: { token_type = Tokens.LEFT_PAREN; _ }
     :: rest ->
-      let rest, cond = expression rest in
-      let rest =
-        consume_token rest ~tt:Tokens.RIGHT_PAREN
-          ~error:"Expect ')' after if condition."
-      in
-      let rest, body = statement rest in
-      (rest, Ast.WhileStmt (cond, body))
+      while_stmt rest
   | ({ token_type = Tokens.WHILE; _ } as token) :: _ ->
       raise (Parse_exn { token; message = "Expect '(' after 'while'." })
   | { token_type = Tokens.FOR; _ }
     :: { token_type = Tokens.LEFT_PAREN; _ }
     :: rest ->
-      let rest, init =
-        match rest with
-        | { token_type = Tokens.SEMICOLON; _ } :: rest -> (rest, None)
-        | _ ->
-            let rest, ast = declaration rest in
-            (rest, Some ast)
-      in
-      let rest, cond =
-        match rest with
-        | { token_type = Tokens.SEMICOLON; _ } :: rest ->
-            (rest, Ast.Literal (Ast.LiteralBoolean true))
-        | _ ->
-            let rest, ast = expression rest in
-            let rest =
-              consume_token rest ~tt:Tokens.SEMICOLON
-                ~error:"Expect ')' after for condition."
-            in
-            (rest, ast)
-      in
-      let rest, increment =
-        match rest with
-        | { token_type = Tokens.RIGHT_PAREN; _ } :: rest -> (rest, None)
-        | _ ->
-            let rest, ast = expression rest in
-            let rest =
-              consume_token rest ~tt:Tokens.RIGHT_PAREN
-                ~error:"Expect ')' after for increment."
-            in
-            (rest, Some ast)
-      in
-      let rest, body = statement rest in
-      let body =
-        match increment with
-        | Some increment -> Ast.Block [ body; Ast.ExprStmt increment ]
-        | None -> body
-      in
-      (rest, Ast.ForStmt (init, cond, body))
+      for_stmt rest
   | { token_type = Tokens.PRINT; _ } :: rest ->
       let rest, expr = expression rest in
       let rest =
@@ -137,6 +82,70 @@ and statement (tokens : Tokens.t list) : Tokens.t list * Ast.stmt_t =
           ~error:"Expect ';' after expression."
       in
       (rest, Ast.ExprStmt expr)
+
+and if_stmt (tokens : Tokens.t list) : Tokens.t list * Ast.stmt_t =
+  let rest, cond = expression tokens in
+  let rest =
+    consume_token rest ~tt:Tokens.RIGHT_PAREN
+      ~error:"Expect ')' after if condition."
+  in
+  let rest, when_branch = statement rest in
+  let rest, else_branch =
+    match rest with
+    | { token_type = Tokens.ELSE; _ } :: rest ->
+        let rest, stmt = statement rest in
+        (rest, Some stmt)
+    | _ -> (rest, None)
+  in
+  (rest, Ast.IfStmt (cond, when_branch, else_branch))
+
+and while_stmt (tokens : Tokens.t list) : Tokens.t list * Ast.stmt_t =
+  let rest, cond = expression tokens in
+  let rest =
+    consume_token rest ~tt:Tokens.RIGHT_PAREN
+      ~error:"Expect ')' after while condition."
+  in
+  let rest, body = statement rest in
+  (rest, Ast.WhileStmt (cond, body))
+
+and for_stmt (tokens : Tokens.t list) : Tokens.t list * Ast.stmt_t =
+  let rest, init =
+    match tokens with
+    | { token_type = Tokens.SEMICOLON; _ } :: rest -> (rest, None)
+    | _ ->
+        let rest, ast = declaration tokens in
+        (rest, Some ast)
+  in
+  let rest, cond =
+    match rest with
+    | { token_type = Tokens.SEMICOLON; _ } :: rest ->
+        (rest, Ast.Literal (Ast.LiteralBoolean true))
+    | _ ->
+        let rest, ast = expression rest in
+        let rest =
+          consume_token rest ~tt:Tokens.SEMICOLON
+            ~error:"Expect ')' after for condition."
+        in
+        (rest, ast)
+  in
+  let rest, increment =
+    match rest with
+    | { token_type = Tokens.RIGHT_PAREN; _ } :: rest -> (rest, None)
+    | _ ->
+        let rest, ast = expression rest in
+        let rest =
+          consume_token rest ~tt:Tokens.RIGHT_PAREN
+            ~error:"Expect ')' after for increment."
+        in
+        (rest, Some ast)
+  in
+  let rest, body = statement rest in
+  let body =
+    match increment with
+    | Some increment -> Ast.Block [ body; Ast.ExprStmt increment ]
+    | None -> body
+  in
+  (rest, Ast.ForStmt (init, cond, body))
 
 and block (tokens : Tokens.t list) (acc : Ast.program_t) :
     Tokens.t list * Ast.stmt_t =
