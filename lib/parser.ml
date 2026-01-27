@@ -71,6 +71,15 @@ and statement (tokens : Tokens.t list) : Tokens.t list * Ast.stmt_t =
       (rest, Ast.IfStmt (cond, when_branch, else_branch))
   | ({ token_type = Tokens.IF; _ } as token) :: _ ->
       raise (Parse_exn { token; message = "Expect '(' after 'if'." })
+  | { token_type = Tokens.WHILE; _} as token 
+    :: { token_type = Tokens.LEFT_PAREN; _ }
+      :: rest -> let rest, cond = expression rest in
+      let rest =
+        consume_token rest ~tt:Tokens.RIGHT_PAREN
+          ~error:"Expect ')' after if condition."
+      in
+      let rest, body_stmt = statement rest in
+
   | { token_type = Tokens.PRINT; _ } :: rest ->
       let rest, expr = expression rest in
       let rest =
