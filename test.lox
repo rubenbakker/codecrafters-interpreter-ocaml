@@ -1,10 +1,9 @@
-// This program tests whether the assignment
-// operation returns the value assigned.
-// The if condition should evaluate to true and
-// the inner boolean expression must be printed.
-// So, in this case the if condition evaluates to
-//true and prints the inner boolean expression
-var a = false;
-if (a = true) {
-  print (a == false);
-}
+// This program uses the logical OR operator to
+// print the first value that is truthy
+print 83 or true;
+print false or 83;
+print false or false or true;
+
+print false or false;
+print false or false or false;
+print false or false or false or false;

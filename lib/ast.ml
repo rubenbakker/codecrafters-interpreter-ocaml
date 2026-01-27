@@ -9,6 +9,7 @@ type literal_t =
 
 type t =
   | Binary of t * Tokens.t * t
+  | Logical of t * Tokens.t * t
   | Assign of Tokens.t * t
   | Grouping of t
   | Literal of literal_t
@@ -87,6 +88,10 @@ let rec to_string (ast : t) : string =
   | Grouping expr -> Stdlib.Printf.sprintf "(group %s)" (to_string expr)
   | Literal value -> literal_to_string value
   | Variable name -> Stdlib.Printf.sprintf "(VAR %s)" name
+  | Logical (left_expr, operator, right_expr) ->
+      Stdlib.Printf.sprintf "(LOGIC %s %s %s)" (to_string left_expr)
+        (token_type_to_string operator.token_type)
+        (to_string right_expr)
   | Unary (operator, expr) ->
       Stdlib.Printf.sprintf "(%s %s)"
         (token_type_to_string operator.token_type)

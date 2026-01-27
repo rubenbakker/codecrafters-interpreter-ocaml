@@ -100,7 +100,7 @@ and block (tokens : Tokens.t list) (acc : Ast.program_t) :
 and expression (tokens : Tokens.t list) = assignment tokens
 
 and assignment (tokens : Tokens.t list) =
-  let rest, expr = equality tokens in
+  let rest, expr = logic_or tokens in
   match rest with
   | ({ token_type = Tokens.EQUAL; _ } as token) :: rest -> (
       let rest, value = assignment rest in
@@ -110,6 +110,22 @@ and assignment (tokens : Tokens.t list) =
       | _ -> raise (Parse_exn { token; message = "Invalid assignment target." })
       )
   | _ -> (rest, expr)
+
+and logic_or (tokens : Tokens.t list) : Tokens.t list * Ast.t =
+  let rest, left_expr = logic_and tokens in
+  match rest with
+  | ({ token_type = Tokens.OR; _ } as operator) :: rest ->
+      let rest, right_expr = logic_or rest in
+      (rest, Ast.Logical (left_expr, operator, right_expr))
+  | _ -> (rest, left_expr)
+
+and logic_and (tokens : Tokens.t list) : Tokens.t list * Ast.t =
+  let rest, left_expr = equality tokens in
+  match rest with
+  | ({ token_type = Tokens.AND; _ } as operator) :: rest ->
+      let rest, right_expr = logic_and rest in
+      (rest, Ast.Logical (left_expr, operator, right_expr))
+  | _ -> (rest, left_expr)
 
 and equality (tokens : Tokens.t list) : Tokens.t list * Ast.t =
   let rest, expr = comparison tokens in

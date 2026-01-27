@@ -83,11 +83,21 @@ let rec expression (ast : Ast.t) (env : environment) : value_t =
   | Ast.Grouping ast -> expression ast env
   | Ast.Binary (left_expr, token_type, right_expr) ->
       binary left_expr token_type right_expr env
+  | Ast.Logical (left_expr, token_type, right_expr) ->
+      logical left_expr token_type right_expr env
   | Ast.Variable name ->
       let token : Tokens.t =
         { token_type = Tokens.IDENTIFIER; lexeme = name; line = 99 }
       in
       get_var ~token env
+
+and logical left_expr token right_expr env =
+  let left = expression left_expr env in
+  let left_truthy = is_truthy left in
+  match token.token_type with
+  | Tokens.OR when left_truthy -> left
+  | Tokens.AND when not left_truthy -> left
+  | _ -> expression right_expr env
 
 and binary left_expr token right_expr env =
   let left = expression left_expr env and right = expression right_expr env in
