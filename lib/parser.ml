@@ -91,10 +91,6 @@ and statement (tokens : Tokens.t list) : Tokens.t list * Ast.stmt_t =
         | { token_type = Tokens.SEMICOLON; _ } :: rest -> (rest, None)
         | _ ->
             let rest, ast = declaration rest in
-            let rest =
-              consume_token rest ~tt:Tokens.SEMICOLON
-                ~error:"Expect ';' after for initializer."
-            in
             (rest, Some ast)
       in
       let rest, cond =
