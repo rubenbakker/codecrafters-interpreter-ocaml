@@ -181,12 +181,21 @@ and statement (stmt : Ast.stmt_t) (env : environment) : unit =
           | Some else_stmt -> statement else_stmt env
           | None -> ()))
   | Ast.WhileStmt (cond, body) -> perform_while cond body env
+  | Ast.ForStmt (init, cond, body) -> perform_for init cond body env
 
 and perform_while cond body env =
   match expression cond env |> is_truthy with
   | true ->
       statement body env;
       perform_while cond body env
+  | false -> ()
+
+and perform_for init cond body env =
+  (match init with Some init -> statement init env | None -> ());
+  match expression cond env |> is_truthy with
+  | true ->
+      statement body env;
+      perform_for None cond body env
   | false -> ()
 
 let evaluate (env : environment) (ast : Ast.t) :

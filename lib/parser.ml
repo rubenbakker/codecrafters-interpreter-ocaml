@@ -81,6 +81,44 @@ and statement (tokens : Tokens.t list) : Tokens.t list * Ast.stmt_t =
       in
       let rest, body = statement rest in
       (rest, Ast.WhileStmt (cond, body))
+  | ({ token_type = Tokens.WHILE; _ } as token) :: _ ->
+      raise (Parse_exn { token; message = "Expect '(' after 'while'." })
+  | { token_type = Tokens.FOR; _ }
+    :: { token_type = Tokens.LEFT_PAREN; _ }
+    :: rest ->
+      let rest, init =
+        match rest with
+        | { token_type = Tokens.SEMICOLON; _ } :: rest -> (rest, None)
+        | _ ->
+            let rest, ast = declaration rest in
+            (rest, Some ast)
+      in
+      let rest, cond =
+        match rest with
+        | { token_type = Tokens.SEMICOLON; _ } :: rest ->
+            (rest, Ast.Literal (Ast.LiteralBoolean true))
+        | _ ->
+            let rest, ast = expression rest in
+            (rest, ast)
+      in
+      let rest, increment =
+        match rest with
+        | { token_type = Tokens.RIGHT_PAREN; _ } :: rest -> (rest, None)
+        | _ ->
+            let rest, ast = expression rest in
+            let rest =
+              consume_token rest ~tt:Tokens.RIGHT_PAREN
+                ~error:"Expect ')' after if condition."
+            in
+            (rest, Some ast)
+      in
+      let rest, body = statement rest in
+      let body =
+        match increment with
+        | Some increment -> Ast.Block [ body; Ast.ExprStmt increment ]
+        | None -> body
+      in
+      (rest, Ast.ForStmt (init, cond, body))
   | { token_type = Tokens.PRINT; _ } :: rest ->
       let rest, expr = expression rest in
       let rest =
