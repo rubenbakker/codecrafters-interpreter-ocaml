@@ -131,3 +131,29 @@ let%expect_test "assignments" =
 
     (PRINT (VAR p))
     |}]
+
+let%expect_test "if assignment" =
+  (match
+     Scanner.scan
+       {|
+// This program should print a different string
+// based on the value of age
+var stage = "unknown";
+print "1";
+var age = 45;
+if (age < 18) { stage = "child"; }
+if (age >= 18) { stage = "adult"; }
+print stage;
+print "2 after stage";
+var isAdult = age >= 18;
+if (isAdult) { print "eligible for voting"; }
+if (!isAdult) { print "not eligible for voting"; }
+      |}
+     |> Scanner.get_tokens |> Parser.parse_program
+   with
+  | Ok r ->
+      Ast.sexp_of_program_t r |> Sexp.to_string_hum |> Stdlib.print_endline
+  | Error e -> Parser.format_error e |> Stdlib.print_endline);
+
+  [%expect {|
+    |}]

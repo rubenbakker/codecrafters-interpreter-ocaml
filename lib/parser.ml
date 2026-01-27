@@ -16,14 +16,20 @@ let consume_token (tokens : Tokens.t list) ~(tt : Tokens.token_type)
 let rec program (tokens : Tokens.t list) : (Ast.program_t, parse_error) Result.t
     =
   try
-    let _, prg = declaration tokens [] in
+    let _, prg = declarations tokens [] in
     Ok prg
   with Parse_exn error -> Error error
 
-and declaration (tokens : Tokens.t list) (acc : Ast.program_t) :
+and declarations (tokens : Tokens.t list) (acc : Ast.program_t) :
     Tokens.t list * Ast.program_t =
   match tokens with
   | [ { token_type = Tokens.EOF; _ } ] -> ([], List.rev acc)
+  | _ ->
+      let rest, stmt = declaration tokens in
+      declarations rest (stmt :: acc)
+
+and declaration (tokens : Tokens.t list) : Tokens.t list * Ast.stmt_t =
+  match tokens with
   | { token_type = Tokens.VAR; _ }
     :: { token_type = Tokens.IDENTIFIER; lexeme = name; _ }
     :: rest -> (
@@ -34,21 +40,18 @@ and declaration (tokens : Tokens.t list) (acc : Ast.program_t) :
             consume_token rest ~tt:Tokens.SEMICOLON
               ~error:"Expect ';' after expression."
           in
-          declaration rest (Ast.VarStmt (name, expr) :: acc)
+          (rest, Ast.VarStmt (name, expr))
       | _ ->
           let rest =
             consume_token rest ~tt:Tokens.SEMICOLON
               ~error:"Expect ';' after expression."
           in
-          declaration rest
-            (Ast.VarStmt (name, Ast.Literal Ast.LiteralNil) :: acc))
-  | rest -> statement rest acc
+          (rest, Ast.VarStmt (name, Ast.Literal Ast.LiteralNil)))
+  | rest -> statement rest
 
-and statement (tokens : Tokens.t list) (acc : Ast.program_t) :
-    Tokens.t list * Ast.program_t =
+and statement (tokens : Tokens.t list) : Tokens.t list * Ast.stmt_t =
   match tokens with
-  | [ { token_type = Tokens.EOF; _ } ] -> ([], List.rev acc)
-  | { token_type = Tokens.RIGHT_BRACE; _ } :: rest -> (rest, List.rev acc)
+  | { token_type = Tokens.LEFT_BRACE; _ } :: rest -> block rest []
   | { token_type = Tokens.IF; _ }
     :: { token_type = Tokens.LEFT_PAREN; _ }
     :: rest ->
@@ -57,15 +60,15 @@ and statement (tokens : Tokens.t list) (acc : Ast.program_t) :
         consume_token rest ~tt:Tokens.RIGHT_PAREN
           ~error:"Expect ')' after if condition."
       in
-      let rest, when_branch = statement rest acc in
+      let rest, when_branch = statement rest in
       let rest, else_branch =
         match rest with
         | { token_type = Tokens.ELSE; _ } :: rest ->
-            let rest, stmt = statement rest acc in
+            let rest, stmt = statement rest in
             (rest, Some stmt)
         | _ -> (rest, None)
       in
-      declaration rest (Ast.IfStmt (cond, when_branch, else_branch) :: acc)
+      (rest, Ast.IfStmt (cond, when_branch, else_branch))
   | ({ token_type = Tokens.IF; _ } as token) :: _ ->
       raise (Parse_exn { token; message = "Expect '(' after 'if'." })
   | { token_type = Tokens.PRINT; _ } :: rest ->
@@ -74,17 +77,25 @@ and statement (tokens : Tokens.t list) (acc : Ast.program_t) :
         consume_token rest ~tt:Tokens.SEMICOLON
           ~error:"Expect ';' after expression."
       in
-      declaration rest (Ast.PrintStmt expr :: acc)
-  | { token_type = Tokens.LEFT_BRACE; _ } :: rest ->
-      let rest, stmts = declaration rest [] in
-      declaration rest (Ast.Block stmts :: acc)
+      (rest, Ast.PrintStmt expr)
   | rest ->
       let rest, expr = expression rest in
       let rest =
         consume_token rest ~tt:Tokens.SEMICOLON
           ~error:"Expect ';' after expression."
       in
-      declaration rest (Ast.ExprStmt expr :: acc)
+      (rest, Ast.ExprStmt expr)
+
+and block (tokens : Tokens.t list) (acc : Ast.program_t) :
+    Tokens.t list * Ast.stmt_t =
+  match tokens with
+  | { token_type = Tokens.RIGHT_BRACE; _ } :: rest ->
+      (rest, Ast.Block (List.rev acc))
+  | [ ({ token_type = Tokens.EOF; _ } as token) ] ->
+      raise (Parse_exn { token; message = "Expect '}' after expression." })
+  | _ ->
+      let rest, stmt = declaration tokens in
+      block rest (stmt :: acc)
 
 and expression (tokens : Tokens.t list) = assignment tokens
 
@@ -205,14 +216,6 @@ and primary (tokens : Tokens.t list) : Tokens.t list * Ast.t =
           ~error:"Expect ')' after expression."
       in
       (rest, Ast.Grouping ast)
-  | [] ->
-      raise
-        (Parse_exn
-           {
-             token =
-               { token_type = Tokens.RIGHT_BRACE; lexeme = "}"; line = 99 };
-             message = "Expect expression.";
-           })
   | _ ->
       raise
         (Parse_exn

@@ -1,8 +1,10 @@
-{
-    var hello = 49;
-    var bar = 49;
-    {
-        print hello + bar;
-    // Missing closing curly brace
-    // Expect compile error
+// This program tests whether the assignment
+// operation returns the value assigned.
+// The if condition should evaluate to true and
+// the inner boolean expression must be printed.
+// So, in this case the if condition evaluates to
+//true and prints the inner boolean expression
+var a = false;
+if (a = true) {
+  print (a == false);
 }
