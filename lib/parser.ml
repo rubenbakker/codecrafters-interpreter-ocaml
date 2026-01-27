@@ -91,6 +91,10 @@ and statement (tokens : Tokens.t list) : Tokens.t list * Ast.stmt_t =
         | { token_type = Tokens.SEMICOLON; _ } :: rest -> (rest, None)
         | _ ->
             let rest, ast = declaration rest in
+            let rest =
+              consume_token rest ~tt:Tokens.SEMICOLON
+                ~error:"Expect ';' after for initializer."
+            in
             (rest, Some ast)
       in
       let rest, cond =
@@ -99,6 +103,10 @@ and statement (tokens : Tokens.t list) : Tokens.t list * Ast.stmt_t =
             (rest, Ast.Literal (Ast.LiteralBoolean true))
         | _ ->
             let rest, ast = expression rest in
+            let rest =
+              consume_token rest ~tt:Tokens.SEMICOLON
+                ~error:"Expect ')' after for condition."
+            in
             (rest, ast)
       in
       let rest, increment =
@@ -108,7 +116,7 @@ and statement (tokens : Tokens.t list) : Tokens.t list * Ast.stmt_t =
             let rest, ast = expression rest in
             let rest =
               consume_token rest ~tt:Tokens.RIGHT_PAREN
-                ~error:"Expect ')' after if condition."
+                ~error:"Expect ')' after for increment."
             in
             (rest, Some ast)
       in
