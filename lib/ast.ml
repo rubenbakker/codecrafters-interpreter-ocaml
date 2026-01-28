@@ -8,6 +8,7 @@ type literal_t =
 [@@deriving compare, equal, sexp]
 
 type t =
+  | Callee of t * t list * Tokens.t
   | Binary of t * Tokens.t * t
   | Logical of t * Tokens.t * t
   | Assign of Tokens.t * t
@@ -85,6 +86,7 @@ let rec to_string (ast : t) : string =
       Stdlib.Printf.sprintf "(%s %s %s)"
         (token_type_to_string operator.token_type)
         (to_string left_expr) (to_string right_expr)
+  | Callee (func, _, _) -> Stdlib.Printf.sprintf "(CALLEE %s)" (to_string func)
   | Assign (name, expr) ->
       Stdlib.Printf.sprintf "(ASSIGN %s %s)" name.lexeme (to_string expr)
   | Grouping expr -> Stdlib.Printf.sprintf "(group %s)" (to_string expr)

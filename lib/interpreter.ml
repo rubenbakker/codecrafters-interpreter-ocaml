@@ -4,6 +4,7 @@ type value_t =
   | BooleanValue of bool
   | NumberValue of float
   | StringValue of string
+  | NativeFunctionValue of string
   | NilValue
 [@@deriving sexp, compare, equal]
 
@@ -64,6 +65,7 @@ let is_truthy value =
   | BooleanValue b -> b
   | NumberValue _ -> true
   | StringValue _ -> true
+  | NativeFunctionValue _ -> true
   | NilValue -> false
 
 let is_equal left right =
@@ -79,6 +81,7 @@ let rec expression (ast : Ast.t) (env : environment) : value_t =
   | Ast.Assign (var, expr) ->
       assign_var ~token:var ~value:(expression expr env) env
   | Ast.Unary (token_type, expr) -> unary token_type expr env
+  | Ast.Callee (func, args, token) -> callee func args token env
   | Ast.Literal value -> literal value
   | Ast.Grouping ast -> expression ast env
   | Ast.Binary (left_expr, token_type, right_expr) ->
@@ -125,6 +128,19 @@ and binary left_expr token right_expr env =
   | _, _, _ ->
       raise (Runtime_exn { token; message = "Operands must be numbers" })
 
+and callee func _args token env : value_t =
+  match expression func env with
+  | NativeFunctionValue "clock" -> NumberValue (Unix.time ())
+  | NativeFunctionValue name ->
+      raise
+        (Runtime_exn
+           {
+             token;
+             message = Stdlib.Printf.sprintf "Unimplemented function %s" name;
+           })
+  | _ ->
+      raise (Runtime_exn { token; message = "Only functions can be called." })
+
 and unary token expr env : value_t =
   let right_value = expression expr env in
   match (token.token_type, right_value) with
@@ -150,6 +166,7 @@ let number_to_string value =
 
 let value_to_string value =
   match value with
+  | NativeFunctionValue name -> Stdlib.Printf.sprintf "<func %s>" name
   | BooleanValue b -> if b then "true" else "false"
   | NumberValue n -> number_to_string n
   | StringValue s -> s
@@ -203,6 +220,10 @@ let evaluate (env : environment) (ast : Ast.t) :
   try Ok (expression ast env)
   with Runtime_exn runtime_error -> Error runtime_error
 
+let define_native_funcs env =
+  define_var ~name:"clock" ~value:(NativeFunctionValue "clock") env;
+  env
+
 let run (program : Ast.program_t) : (unit, runtime_error) Result.t =
-  try Ok (create_environment None |> run_program program)
+  try Ok (create_environment None |> define_native_funcs |> run_program program)
   with Runtime_exn runtime_error -> Error runtime_error

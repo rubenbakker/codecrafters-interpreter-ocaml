@@ -275,9 +275,31 @@ and unary (tokens : Tokens.t list) : Tokens.t list * Ast.t =
 
 and call (tokens : Tokens.t list) : Tokens.t list * Ast.t =
   let rest, expr = primary tokens in
-  match rest with
-  | { token_type = Tokens.LEFT_PAREN; _ } :: rest -> (rest, expr)
-  | _ -> (rest, expr)
+  call_only rest expr
+
+and call_only (tokens : Tokens.t list) (expr : Ast.t) : Tokens.t list * Ast.t =
+  match tokens with
+  | ({ token_type = Tokens.LEFT_PAREN; _ } as token) :: rest ->
+      let rest, args = call_args rest [] in
+      call_only rest (Ast.Callee (expr, args, token))
+  | _ -> (tokens, expr)
+
+and call_args (tokens : Tokens.t list) (acc : Ast.t list) :
+    Tokens.t list * Ast.t list =
+  match tokens with
+  | { token_type = Tokens.RIGHT_PAREN; _ } :: rest -> (rest, [])
+  | _ -> (
+      let rest, expr = expression tokens in
+      match rest with
+      | { token_type = Tokens.COMMA; _ } :: rest -> call_args rest (expr :: acc)
+      | { token_type = Tokens.RIGHT_PAREN; _ } :: rest -> (rest, List.rev acc)
+      | _ ->
+          raise
+            (Parse_exn
+               {
+                 token = List.hd_exn tokens;
+                 message = "Expected ')' after function arg list";
+               }))
 
 and primary (tokens : Tokens.t list) : Tokens.t list * Ast.t =
   match tokens with
