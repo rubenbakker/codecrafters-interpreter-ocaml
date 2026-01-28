@@ -271,7 +271,13 @@ and unary (tokens : Tokens.t list) : Tokens.t list * Ast.t =
     when Tokens.matches_any operator [ Tokens.BANG; Tokens.MINUS ] ->
       let rest, right_expr = unary rest in
       (rest, Ast.Unary (operator, right_expr))
-  | _ -> primary tokens
+  | _ -> call tokens
+
+and call (tokens : Tokens.t list) : Tokens.t list * Ast.t =
+  let rest, expr = primary tokens in
+  match rest with
+  | { token_type = Tokens.LEFT_PAREN; _ } :: rest -> (rest, expr)
+  | _ -> (rest, expr)
 
 and primary (tokens : Tokens.t list) : Tokens.t list * Ast.t =
   match tokens with
