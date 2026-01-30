@@ -8,7 +8,7 @@ and value_t =
   | NumberValue of float
   | StringValue of string
   | NativeFunctionValue of string * int
-  | FunctionValue of Tokens.t * Tokens.t list * Ast.stmt_t list
+  | FunctionValue of Tokens.t * Tokens.t list * Ast.stmt_t list * environment
   | NilValue
 
 type runtime_error = { token : Tokens.t; message : string }
@@ -71,7 +71,7 @@ let is_truthy value =
   | NumberValue _ -> true
   | StringValue _ -> true
   | NativeFunctionValue _ -> true
-  | FunctionValue (_, _, _) -> true
+  | FunctionValue (_, _, _, _) -> true
   | NilValue -> false
 
 let is_equal left right =
@@ -95,7 +95,7 @@ let number_to_string value =
 let value_to_string value =
   match value with
   | NativeFunctionValue (name, _) -> Stdlib.Printf.sprintf "<fn %s>" name
-  | FunctionValue (name, _, _) -> Stdlib.Printf.sprintf "<fn %s>" name.lexeme
+  | FunctionValue (name, _, _, _) -> Stdlib.Printf.sprintf "<fn %s>" name.lexeme
   | BooleanValue b -> if b then "true" else "false"
   | NumberValue n -> number_to_string n
   | StringValue s -> s
@@ -148,7 +148,9 @@ and return expr env =
   raise (Return_exn return_value)
 
 and define_function name args body env =
-  define_var ~name:name.lexeme ~value:(FunctionValue (name, args, body)) env
+  define_var ~name:name.lexeme
+    ~value:(FunctionValue (name, args, body, env))
+    env
 
 and expression (ast : Ast.t) (env : environment) : value_t =
   match ast with
@@ -222,15 +224,14 @@ and call callee args token env : value_t =
              token;
              message = Stdlib.Printf.sprintf "Unimplemented function %s" name;
            })
-  | FunctionValue (_fun_name, fun_args, fun_body) ->
-      call_function fun_args fun_body args token env
+  | FunctionValue (_fun_name, fun_args, fun_body, closure) ->
+      call_function fun_args fun_body args token closure env
   | _ ->
       raise
         (Runtime_exn { token; message = "Can only call functions and classes." })
 
-and call_function fun_args fun_body args token env =
-  let global_env = global_env env in
-  let func_enc = create_environment (Some global_env) in
+and call_function fun_args fun_body args token closure env =
+  let func_enc = create_environment (Some closure) in
   let open List.Or_unequal_lengths in
   match List.zip fun_args args with
   | Ok arg_pairs -> (
