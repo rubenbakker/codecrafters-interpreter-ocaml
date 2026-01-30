@@ -15,6 +15,7 @@ type runtime_error = { token : Tokens.t; message : string }
 
 exception Runtime_exn of runtime_error
 exception Notimplemented
+exception Return_exn of value_t
 
 let create_environment (parent : environment option) : environment =
   { parent; vars = Hashtbl.create (module String) }
@@ -108,6 +109,7 @@ and statement (stmt : Ast.stmt_t) (env : environment) : unit =
   match stmt with
   | Ast.Block stmts -> run_program stmts (create_environment (Some env))
   | Ast.Function (name, args, body) -> define_function name args body env
+  | Ast.ReturnStmt expr -> return expr env
   | Ast.PrintStmt expr ->
       expression expr env |> value_to_string |> Stdlib.print_endline
   | Ast.VarStmt (name, expr) ->
@@ -137,6 +139,10 @@ and perform_for init cond body env =
       statement body env;
       perform_for None cond body env
   | false -> ()
+
+and return expr env =
+  let return_value = expression expr env in
+  raise (Return_exn return_value)
 
 and define_function name args body env =
   define_var ~name:name.lexeme ~value:(FunctionValue (name, args, body)) env
@@ -223,14 +229,16 @@ and call_function fun_args fun_body args token env =
   let env = create_environment (Some env) in
   let open List.Or_unequal_lengths in
   match List.zip fun_args args with
-  | Ok arg_pairs ->
+  | Ok arg_pairs -> (
       List.map
         ~f:(fun (name_token, expr) ->
           define_var ~name:name_token.lexeme ~value:(expression expr env) env)
         arg_pairs
       |> ignore;
-      run_program fun_body env;
-      NilValue
+      try
+        run_program fun_body env;
+        NilValue
+      with Return_exn value -> value)
   | Unequal_lengths ->
       raise
         (Runtime_exn

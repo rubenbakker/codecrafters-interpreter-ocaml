@@ -25,6 +25,7 @@ type stmt_t =
   | WhileStmt of t * stmt_t
   | ForStmt of stmt_t option * t * stmt_t
   | PrintStmt of t
+  | ReturnStmt of t
   | VarStmt of string * t
   | ExprStmt of t
 [@@deriving compare, equal, sexp]
@@ -140,6 +141,8 @@ let rec program_to_string (program : program_t) : string =
       | VarStmt (name, init_expr) ->
           Stdlib.Printf.sprintf "(VAR %s = %s)" name (to_string init_expr)
       | PrintStmt expr -> Stdlib.Printf.sprintf "(PRINT %s)\n" (to_string expr)
+      | ReturnStmt expr ->
+          Stdlib.Printf.sprintf "(RETURN %s)\n" (to_string expr)
       | ExprStmt expr -> Stdlib.Printf.sprintf "(%s)\n" (to_string expr))
     program
   |> String.concat_lines
