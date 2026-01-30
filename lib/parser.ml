@@ -81,9 +81,14 @@ and function_args (tokens : Tokens.t list) (acc : Tokens.t list) :
     Tokens.t list * Tokens.t list =
   match tokens with
   | { token_type = Tokens.RIGHT_PAREN; _ } :: rest -> (rest, List.rev acc)
-  | ({ token_type = Tokens.IDENTIFIER; _ } as token) :: rest ->
+  | ({ token_type = Tokens.IDENTIFIER; _ } as token)
+    :: { token_type = Tokens.RIGHT_PAREN; _ }
+    :: rest ->
+      (rest, List.rev (token :: acc))
+  | ({ token_type = Tokens.IDENTIFIER; _ } as token)
+    :: { token_type = Tokens.COMMA; _ }
+    :: rest ->
       function_args rest (token :: acc)
-  | { token_type = Tokens.COMMA; _ } :: rest -> function_args rest acc
   | _ ->
       raise
         (Parse_exn
@@ -336,7 +341,8 @@ and call_args (tokens : Tokens.t list) (acc : Ast.t list) :
       let rest, expr = expression tokens in
       match rest with
       | { token_type = Tokens.COMMA; _ } :: rest -> call_args rest (expr :: acc)
-      | { token_type = Tokens.RIGHT_PAREN; _ } :: rest -> (rest, List.rev acc)
+      | { token_type = Tokens.RIGHT_PAREN; _ } :: rest ->
+          (rest, List.rev (expr :: acc))
       | _ ->
           raise
             (Parse_exn
