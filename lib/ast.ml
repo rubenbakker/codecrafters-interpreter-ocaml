@@ -8,7 +8,7 @@ type literal_t =
 [@@deriving compare, equal, sexp]
 
 type t =
-  | Callee of t * t list * Tokens.t
+  | Call of t * t list * Tokens.t
   | Binary of t * Tokens.t * t
   | Logical of t * Tokens.t * t
   | Assign of Tokens.t * t
@@ -20,6 +20,7 @@ type t =
 
 type stmt_t =
   | Block of stmt_t list
+  | Function of Tokens.t * Tokens.t list * stmt_t list
   | IfStmt of t * stmt_t * stmt_t option
   | WhileStmt of t * stmt_t
   | ForStmt of stmt_t option * t * stmt_t
@@ -86,7 +87,8 @@ let rec to_string (ast : t) : string =
       Stdlib.Printf.sprintf "(%s %s %s)"
         (token_type_to_string operator.token_type)
         (to_string left_expr) (to_string right_expr)
-  | Callee (func, _, _) -> Stdlib.Printf.sprintf "(CALLEE %s)" (to_string func)
+  | Call (callee, _, _) ->
+      Stdlib.Printf.sprintf "(CALLEE %s)" (to_string callee)
   | Assign (name, expr) ->
       Stdlib.Printf.sprintf "(ASSIGN %s %s)" name.lexeme (to_string expr)
   | Grouping expr -> Stdlib.Printf.sprintf "(group %s)" (to_string expr)
@@ -108,6 +110,12 @@ let rec program_to_string (program : program_t) : string =
       | Block stmts ->
           Stdlib.Printf.sprintf "(BLOCK\n%s)"
             (String.rstrip (program_to_string stmts))
+      | Function (name, args, body) ->
+          Stdlib.Printf.sprintf "(FUNCTION %s (%s)\n%s)" (Tokens.to_string name)
+            (args
+            |> List.map ~f:(fun a -> Tokens.to_string a)
+            |> String.concat ~sep:", ")
+            (String.rstrip (program_to_string body))
       | IfStmt (cond, when_branch, else_branch) ->
           let else_str =
             match else_branch with

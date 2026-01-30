@@ -30,6 +30,12 @@ and declarations (tokens : Tokens.t list) (acc : Ast.program_t) :
 
 and declaration (tokens : Tokens.t list) : Tokens.t list * Ast.stmt_t =
   match tokens with
+  | { token_type = Tokens.FUN; _ }
+    :: ({ token_type = Tokens.IDENTIFIER; _ } as name_token)
+    :: rest ->
+      function_stmt name_token rest
+  | ({ token_type = Tokens.FUN; _ } as token) :: _ ->
+      raise (Parse_exn { token; message = "Expect function name." })
   | { token_type = Tokens.VAR; _ }
     :: { token_type = Tokens.IDENTIFIER; lexeme = name; _ }
     :: rest -> (
@@ -48,6 +54,43 @@ and declaration (tokens : Tokens.t list) : Tokens.t list * Ast.stmt_t =
           in
           (rest, Ast.VarStmt (name, Ast.Literal Ast.LiteralNil)))
   | rest -> statement rest
+
+and function_stmt (name_token : Tokens.t) (tokens : Tokens.t list) :
+    Tokens.t list * Ast.stmt_t =
+  match tokens with
+  | { token_type = Tokens.LEFT_PAREN; _ } :: rest -> (
+      let rest, args = function_args rest [] in
+      let rest =
+        consume_token rest ~tt:Tokens.LEFT_BRACE
+          ~error:"Expect '{' after function argument lits"
+      in
+      let rest, body = block rest [] in
+      match body with
+      | Block stmts -> (rest, Ast.Function (name_token, args, stmts))
+      | _ ->
+          raise
+            (Parse_exn
+               { token = name_token; message = "Couldn't parse function body." })
+      )
+  | _ ->
+      raise
+        (Parse_exn
+           { token = name_token; message = "Expect '(' after function name.)" })
+
+and function_args (tokens : Tokens.t list) (acc : Tokens.t list) :
+    Tokens.t list * Tokens.t list =
+  match tokens with
+  | { token_type = Tokens.RIGHT_PAREN; _ } :: rest -> (rest, List.rev acc)
+  | ({ token_type = Tokens.IDENTIFIER; _ } as token) :: rest ->
+      function_args rest (token :: acc)
+  | { token_type = Tokens.COMMA; _ } :: rest -> function_args rest acc
+  | _ ->
+      raise
+        (Parse_exn
+           {
+             token = List.hd_exn tokens;
+             message = "Expected ')' after function arg list";
+           })
 
 and statement (tokens : Tokens.t list) : Tokens.t list * Ast.stmt_t =
   match tokens with
@@ -277,12 +320,13 @@ and call (tokens : Tokens.t list) : Tokens.t list * Ast.t =
   let rest, expr = primary tokens in
   call_only rest expr
 
-and call_only (tokens : Tokens.t list) (expr : Ast.t) : Tokens.t list * Ast.t =
+and call_only (tokens : Tokens.t list) (callee : Ast.t) : Tokens.t list * Ast.t
+    =
   match tokens with
   | ({ token_type = Tokens.LEFT_PAREN; _ } as token) :: rest ->
       let rest, args = call_args rest [] in
-      call_only rest (Ast.Callee (expr, args, token))
-  | _ -> (tokens, expr)
+      call_only rest (Ast.Call (callee, args, token))
+  | _ -> (tokens, callee)
 
 and call_args (tokens : Tokens.t list) (acc : Ast.t list) :
     Tokens.t list * Ast.t list =

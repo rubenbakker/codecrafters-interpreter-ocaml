@@ -1,0 +1,5 @@
+// This program defines a simple function that
+// doesn't take any arguments
+// and then invokes the function
+fun hello() { print 42; }
+hello();;
