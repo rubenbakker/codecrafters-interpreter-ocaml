@@ -1,16 +1,16 @@
 open! Base
 
-type value_t =
+type environment_vars = (string, value_t) Hashtbl.t
+and environment = { parent : environment option; vars : environment_vars }
+
+and value_t =
   | BooleanValue of bool
   | NumberValue of float
   | StringValue of string
   | NativeFunctionValue of string * int
   | FunctionValue of Tokens.t * Tokens.t list * Ast.stmt_t list
   | NilValue
-[@@deriving sexp, compare, equal]
 
-type environment_vars = (string, value_t) Hashtbl.t
-type environment = { parent : environment option; vars : environment_vars }
 type runtime_error = { token : Tokens.t; message : string }
 
 exception Runtime_exn of runtime_error
