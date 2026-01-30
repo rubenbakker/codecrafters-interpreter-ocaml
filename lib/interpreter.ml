@@ -148,7 +148,9 @@ and return expr env =
   raise (Return_exn return_value)
 
 and define_function name args body env =
-  define_var ~name:name.lexeme ~value:(FunctionValue (name, args, body)) env
+  define_var ~name:name.lexeme
+    ~value:(FunctionValue (name, args, body))
+    (global_env env)
 
 and expression (ast : Ast.t) (env : environment) : value_t =
   match ast with
