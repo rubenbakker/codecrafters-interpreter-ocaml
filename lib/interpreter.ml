@@ -62,6 +62,9 @@ let rec assign_var_ ~(token : Tokens.t) ~(value : value_t)
 let assign_var ~(token : Tokens.t) ~(value : value_t) (env : environment) =
   assign_var_ ~token ~value (Some env)
 
+let rec global_env env =
+  match env.parent with None -> env | Some env -> global_env env
+
 let is_truthy value =
   match value with
   | BooleanValue b -> b
@@ -226,6 +229,7 @@ and call callee args token env : value_t =
         (Runtime_exn { token; message = "Can only call functions and classes." })
 
 and call_function fun_args fun_body args token env =
+  let env = global_env env in
   let env = create_environment (Some env) in
   let open List.Or_unequal_lengths in
   match List.zip fun_args args with
