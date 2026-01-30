@@ -148,9 +148,7 @@ and return expr env =
   raise (Return_exn return_value)
 
 and define_function name args body env =
-  define_var ~name:name.lexeme
-    ~value:(FunctionValue (name, args, body))
-    (global_env env)
+  define_var ~name:name.lexeme ~value:(FunctionValue (name, args, body)) env
 
 and expression (ast : Ast.t) (env : environment) : value_t =
   match ast with
@@ -231,18 +229,19 @@ and call callee args token env : value_t =
         (Runtime_exn { token; message = "Can only call functions and classes." })
 
 and call_function fun_args fun_body args token env =
-  let env = global_env env in
-  let env = create_environment (Some env) in
+  let global_env = global_env env in
+  let func_enc = create_environment (Some global_env) in
   let open List.Or_unequal_lengths in
   match List.zip fun_args args with
   | Ok arg_pairs -> (
       List.map
         ~f:(fun (name_token, expr) ->
-          define_var ~name:name_token.lexeme ~value:(expression expr env) env)
+          define_var ~name:name_token.lexeme ~value:(expression expr env)
+            func_enc)
         arg_pairs
       |> ignore;
       try
-        run_program fun_body env;
+        run_program fun_body func_enc;
         NilValue
       with Return_exn value -> value)
   | Unequal_lengths ->
