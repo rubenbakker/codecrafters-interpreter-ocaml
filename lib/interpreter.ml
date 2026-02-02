@@ -55,7 +55,7 @@ let rec get_var_ ~(token : Tokens.t) ~(expr : Ast.t) (env : environment option)
 let rec find_env (env : environment) (distance : int option) : environment =
   match (distance, env.parent) with
   | None, None -> env
-  | None, Some parent -> find_env parent None
+  | None, Some _ -> env
   | Some 0, Some _ -> env
   | Some distance, Some parent -> find_env parent (Some (distance - 1))
   | Some _, None -> env
@@ -191,11 +191,7 @@ and expression (ast : Ast.t) (env : environment) : value_t =
       binary left_expr token_type right_expr env
   | Ast.Logical (left_expr, token_type, right_expr) ->
       logical left_expr token_type right_expr env
-  | Ast.Variable name as expr ->
-      let token : Tokens.t =
-        { token_type = Tokens.IDENTIFIER; lexeme = name; line = 99 }
-      in
-      get_var ~token ~expr env
+  | Ast.Variable (_name, token) as expr -> get_var ~token ~expr env
 
 and logical left_expr token right_expr env =
   let left = expression left_expr env in

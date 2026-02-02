@@ -71,11 +71,11 @@ and statement (stmt : Ast.stmt_t) (scope : scope_t) (acc : tl) : tl =
 
 and expression (expr : Ast.t) (scope : scope_t) (acc : tl) : tl =
   match expr with
-  | Ast.Call (expr1, args, _) ->
+  | Ast.Call (callee, args, _) ->
       let arg_defs =
         List.map args ~f:(fun expr -> expression expr scope []) |> List.concat
       in
-      expression expr1 scope (List.concat [ acc; arg_defs ])
+      expression callee scope (List.concat [ acc; arg_defs ])
   | Ast.Binary (expr1, _, expr2) ->
       expression expr1 scope acc |> expression expr2 scope
   | Ast.Logical (expr1, _, expr2) ->
@@ -85,7 +85,7 @@ and expression (expr : Ast.t) (scope : scope_t) (acc : tl) : tl =
       expression expr scope acc
   | Ast.Grouping expr -> expression expr scope acc
   | Ast.Literal _ -> acc
-  | Ast.Variable name as expr -> resolve_var scope expr name acc
+  | Ast.Variable (name, _) as expr -> resolve_var scope expr name acc
   | Ast.Unary (_, expr) -> expression expr scope acc
 
 let analyze_program_tl (program : Ast.program_t) : (t list, string) Result.t =
@@ -93,7 +93,6 @@ let analyze_program_tl (program : Ast.program_t) : (t list, string) Result.t =
 
 let analyze_program (program : Ast.program_t) : (th, string) Result.t =
   let pp = statements program (create_scope ()) [] in
-  Stdlib.print_endline (sexp_of_tl pp |> Sexp.to_string_hum);
   let hasht : th = Hashtbl.create (module Ast) in
   List.map ~f:(fun (expr, dist) -> Hashtbl.set hasht ~key:expr ~data:dist) pp
   |> ignore;

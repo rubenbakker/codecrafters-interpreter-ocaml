@@ -225,7 +225,7 @@ and assignment (tokens : Tokens.t list) =
   | ({ token_type = Tokens.EQUAL; _ } as token) :: rest -> (
       let rest, value = assignment rest in
       match expr with
-      | Ast.Variable name ->
+      | Ast.Variable (name, _) ->
           (rest, Ast.Assign ({ token with lexeme = name }, value))
       | _ -> raise (Parse_exn { token; message = "Invalid assignment target." })
       )
@@ -373,8 +373,8 @@ and primary (tokens : Tokens.t list) : Tokens.t list * Ast.t =
       (rest, Ast.Literal (Ast.LiteralNumber value))
   | { token_type = Tokens.STRING value; _ } :: rest ->
       (rest, Ast.Literal (Ast.LiteralString value))
-  | { token_type = Tokens.IDENTIFIER; lexeme = name; _ } :: rest ->
-      (rest, Ast.Variable name)
+  | ({ token_type = Tokens.IDENTIFIER; lexeme = name; _ } as token) :: rest ->
+      (rest, Ast.Variable (name, token))
   | { token_type = Tokens.LEFT_PAREN; _ } :: rest ->
       let (rest : Tokens.t list), ast = expression rest in
       let rest =

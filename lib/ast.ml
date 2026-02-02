@@ -14,7 +14,7 @@ type t =
   | Assign of Tokens.t * t
   | Grouping of t
   | Literal of literal_t
-  | Variable of string
+  | Variable of string * Tokens.t
   | Unary of Tokens.t * t
 [@@deriving compare, equal, sexp, hash]
 
@@ -94,7 +94,7 @@ let rec to_string (ast : t) : string =
       Stdlib.Printf.sprintf "(ASSIGN %s %s)" name.lexeme (to_string expr)
   | Grouping expr -> Stdlib.Printf.sprintf "(group %s)" (to_string expr)
   | Literal value -> literal_to_string value
-  | Variable name -> Stdlib.Printf.sprintf "(VAR %s)" name
+  | Variable (name, _) -> Stdlib.Printf.sprintf "(VAR %s)" name
   | Logical (left_expr, operator, right_expr) ->
       Stdlib.Printf.sprintf "(LOGIC %s %s %s)" (to_string left_expr)
         (token_type_to_string operator.token_type)
