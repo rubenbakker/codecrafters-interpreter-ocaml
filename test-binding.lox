@@ -20,7 +20,7 @@ var count = 0;
 
   // This variable declaration shouldn't affect
   // our counter.
-  var count = 5;
+  var count = 99;
 
   counter1(); // Should print 3
   print count;

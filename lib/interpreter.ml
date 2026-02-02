@@ -63,9 +63,6 @@ let rec find_env (env : environment) (distance : int option) : environment =
 let get_var ~(token : Tokens.t) ~(expr : Ast.t) (env : environment) : value_t =
   let distance = Hashtbl.find env.distances expr in
   let env = find_env env distance in
-  Stdlib.Printf.printf "get_var %s expr:%s distance: %d\n" token.lexeme
-    (Ast.sexp_of_t expr |> Sexp.to_string_hum)
-    (match distance with Some distance -> distance | None -> -1);
   get_var_ ~token ~expr (Some env)
 
 let rec assign_var_ ~(token : Tokens.t) ~(value : value_t)
@@ -86,7 +83,10 @@ let rec assign_var_ ~(token : Tokens.t) ~(value : value_t)
           Hashtbl.set env.vars ~key:token.lexeme ~data:value;
           value)
 
-let assign_var ~(token : Tokens.t) ~(value : value_t) (env : environment) =
+let assign_var ~(token : Tokens.t) ~(expr : Ast.t) ~(value : value_t)
+    (env : environment) =
+  let distance = Hashtbl.find env.distances expr in
+  let env = find_env env distance in
   assign_var_ ~token ~value (Some env)
 
 let rec global_env env =
@@ -182,7 +182,7 @@ and define_function name args body env =
 and expression (ast : Ast.t) (env : environment) : value_t =
   match ast with
   | Ast.Assign (var, expr) ->
-      assign_var ~token:var ~value:(expression expr env) env
+      assign_var ~token:var ~expr:ast ~value:(expression expr env) env
   | Ast.Unary (token_type, expr) -> unary token_type expr env
   | Ast.Call (callee, args, token) -> call callee args token env
   | Ast.Literal value -> literal value
