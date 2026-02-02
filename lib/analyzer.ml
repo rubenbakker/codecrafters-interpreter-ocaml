@@ -21,16 +21,12 @@ let define_var (scope : scope_t) (name : string) =
 
 let rec resolve_local_var (scope : scope_t) (expr : Ast.t) (name : string)
     (distance : int) : (Ast.t * int) option =
-  (* ignore global scope *)
-  match scope.parent with
-  | None -> None
-  | Some _ -> (
-      match Hashtbl.find scope.vars name with
-      | Some _ -> Some (expr, distance)
-      | None -> (
-          match scope.parent with
-          | None -> None
-          | Some parent -> resolve_local_var parent expr name (distance + 1)))
+  match Hashtbl.find scope.vars name with
+  | Some _ -> Some (expr, distance)
+  | None -> (
+      match scope.parent with
+      | None -> None
+      | Some parent -> resolve_local_var parent expr name (distance + 1))
 
 let resolve_var (scope : scope_t) (expr : Ast.t) (name : string) (acc : tl) : tl
     =
@@ -84,8 +80,8 @@ and expression (expr : Ast.t) (scope : scope_t) (acc : tl) : tl =
       expression expr1 scope acc |> expression expr2 scope
   | Ast.Logical (expr1, _, expr2) ->
       expression expr1 scope acc |> expression expr2 scope
-  | Ast.Assign (name_token, expr) ->
-      let acc = resolve_var scope expr name_token.lexeme acc in
+  | Ast.Assign (name_token, expr) as assign_expr ->
+      let acc = resolve_var scope assign_expr name_token.lexeme acc in
       expression expr scope acc
   | Ast.Grouping expr -> expression expr scope acc
   | Ast.Literal _ -> acc
@@ -97,6 +93,7 @@ let analyze_program_tl (program : Ast.program_t) : (t list, string) Result.t =
 
 let analyze_program (program : Ast.program_t) : (th, string) Result.t =
   let pp = statements program (create_scope ()) [] in
+  Stdlib.print_endline (sexp_of_tl pp |> Sexp.to_string_hum);
   let hasht : th = Hashtbl.create (module Ast) in
   List.map ~f:(fun (expr, dist) -> Hashtbl.set hasht ~key:expr ~data:dist) pp
   |> ignore;

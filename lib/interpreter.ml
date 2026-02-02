@@ -56,13 +56,16 @@ let rec find_env (env : environment) (distance : int option) : environment =
   match (distance, env.parent) with
   | None, None -> env
   | None, Some parent -> find_env parent None
-  | Some _, None -> env
   | Some 0, Some _ -> env
   | Some distance, Some parent -> find_env parent (Some (distance - 1))
+  | Some _, None -> env
 
 let get_var ~(token : Tokens.t) ~(expr : Ast.t) (env : environment) : value_t =
   let distance = Hashtbl.find env.distances expr in
   let env = find_env env distance in
+  Stdlib.Printf.printf "get_var %s expr:%s distance: %d\n" token.lexeme
+    (Ast.sexp_of_t expr |> Sexp.to_string_hum)
+    (match distance with Some distance -> distance | None -> -1);
   get_var_ ~token ~expr (Some env)
 
 let rec assign_var_ ~(token : Tokens.t) ~(value : value_t)
