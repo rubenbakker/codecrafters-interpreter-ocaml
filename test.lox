@@ -1,9 +1,27 @@
-// This program uses the logical OR operator to
-// print the first value that is truthy
-print 83 or true;
-print false or 83;
-print false or false or true;
+// This program uses for loops and block scopes
+// to print the updates to the same variable
+var baz = "after";
+{
+  var baz = "before";
 
-print false or false;
-print false or false or false;
-print false or false or false or false;
+  for (var baz = 1; baz < 1; baz = baz + 1) {
+    print baz;
+    var baz = -1;
+    print baz;
+  }
+  print baz;
+}
+
+{
+  for (var baz = 0; baz > 0; baz + baz + 1) {}
+
+  var baz = "after";
+  print baz;
+
+  for (baz = 0; baz < 1; baz = baz + 1) {
+    print baz;
+  }
+  print "what should?";
+  print baz;
+}
+

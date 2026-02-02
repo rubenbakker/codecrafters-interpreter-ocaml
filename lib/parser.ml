@@ -202,7 +202,7 @@ and for_stmt (tokens : Tokens.t list) : Tokens.t list * Ast.stmt_t =
   let body =
     match increment with
     | Some increment -> Ast.Block [ body; Ast.ExprStmt increment ]
-    | None -> body
+    | None -> Ast.Block [ body ]
   in
   (rest, Ast.ForStmt (init, cond, body))
 
