@@ -22,4 +22,5 @@
   ppx_expect
   ppx_inline_test
   ppx_sexp_conv
+  ppx_hash
   ppx_compare))

@@ -66,11 +66,16 @@ let parse_program_command filename =
 
 let run_command filename =
   parse_program filename (fun program ->
-      match Interpreter.run program with
-      | Ok _ -> 0
+      match Analyzer.analyze_program program with
       | Error error ->
-          Interpreter.error_to_string error |> Stdlib.prerr_endline;
-          70)
+          Stdlib.print_endline error;
+          70
+      | Ok var_defs -> (
+          match Interpreter.run program var_defs with
+          | Ok _ -> 0
+          | Error error ->
+              Interpreter.error_to_string error |> Stdlib.prerr_endline;
+              70))
 
 let () =
   if Array.length Stdlib.Sys.argv < 3 then (

@@ -5,7 +5,7 @@ type literal_t =
   | LiteralString of String.t
   | LiteralBoolean of Bool.t
   | LiteralNil
-[@@deriving compare, equal, sexp]
+[@@deriving compare, equal, sexp, hash]
 
 type t =
   | Call of t * t list * Tokens.t
@@ -16,7 +16,7 @@ type t =
   | Literal of literal_t
   | Variable of string
   | Unary of Tokens.t * t
-[@@deriving compare, equal, sexp]
+[@@deriving compare, equal, sexp, hash]
 
 type stmt_t =
   | Block of stmt_t list
@@ -28,7 +28,7 @@ type stmt_t =
   | ReturnStmt of t
   | VarStmt of string * t
   | ExprStmt of t
-[@@deriving compare, equal, sexp]
+[@@deriving compare, equal, sexp, hash]
 
 type program_t = stmt_t list [@@deriving compare, equal, sexp]
 

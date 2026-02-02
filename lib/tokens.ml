@@ -40,10 +40,10 @@ type token_type =
   | VAR
   | WHILE
   | EOF
-[@@deriving compare, equal, sexp]
+[@@deriving compare, equal, sexp, hash]
 
 type t = { token_type : token_type; lexeme : string; line : int }
-[@@deriving compare, equal, sexp]
+[@@deriving compare, equal, sexp, hash]
 
 let token_name token : string =
   match token.token_type with

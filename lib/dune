@@ -5,4 +5,10 @@
  (libraries base unix)
  (inline_tests)
  (preprocess
-  (pps ppx_assert ppx_inline_test ppx_expect ppx_sexp_conv ppx_compare)))
+  (pps
+   ppx_assert
+   ppx_inline_test
+   ppx_expect
+   ppx_sexp_conv
+   ppx_compare
+   ppx_hash)))

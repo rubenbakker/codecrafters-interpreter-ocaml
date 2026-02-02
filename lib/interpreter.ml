@@ -1,7 +1,12 @@
 open! Base
 
 type environment_vars = (string, value_t) Hashtbl.t
-and environment = { parent : environment option; vars : environment_vars }
+
+and environment = {
+  parent : environment option;
+  vars : environment_vars;
+  distances : Analyzer.th;
+}
 
 and value_t =
   | BooleanValue of bool
@@ -17,13 +22,22 @@ exception Runtime_exn of runtime_error
 exception Notimplemented
 exception Return_exn of value_t
 
-let create_environment (parent : environment option) : environment =
-  { parent; vars = Hashtbl.create (module String) }
+let create_root_environment
+    ?(distances : Analyzer.th = Hashtbl.create (module Ast)) () : environment =
+  { parent = None; distances; vars = Hashtbl.create (module String) }
+
+let create_environment (parent : environment) : environment =
+  {
+    parent = Some parent;
+    distances = parent.distances;
+    vars = Hashtbl.create (module String);
+  }
 
 let define_var ~(name : string) ~(value : value_t) (env : environment) =
   Hashtbl.set env.vars ~key:name ~data:value
 
-let rec get_var_ ~(token : Tokens.t) (env : environment option) : value_t =
+let rec get_var_ ~(token : Tokens.t) ~(expr : Ast.t) (env : environment option)
+    : value_t =
   let name = token.lexeme in
   match env with
   | None ->
@@ -35,11 +49,21 @@ let rec get_var_ ~(token : Tokens.t) (env : environment option) : value_t =
            })
   | Some env -> (
       match Hashtbl.find env.vars token.lexeme with
-      | None -> get_var_ ~token env.parent
+      | None -> get_var_ ~token ~expr:(expr : Ast.t) env.parent
       | Some v -> v)
 
-let get_var ~(token : Tokens.t) (env : environment) : value_t =
-  get_var_ ~token (Some env)
+let rec find_env (env : environment) (distance : int option) : environment =
+  match (distance, env.parent) with
+  | None, None -> env
+  | None, Some parent -> find_env parent None
+  | Some _, None -> env
+  | Some 0, Some _ -> env
+  | Some distance, Some parent -> find_env parent (Some (distance - 1))
+
+let get_var ~(token : Tokens.t) ~(expr : Ast.t) (env : environment) : value_t =
+  let distance = Hashtbl.find env.distances expr in
+  let env = find_env env distance in
+  get_var_ ~token ~expr (Some env)
 
 let rec assign_var_ ~(token : Tokens.t) ~(value : value_t)
     (env : environment option) =
@@ -110,7 +134,7 @@ let rec run_program (program : Ast.program_t) (env : environment) : unit =
 
 and statement (stmt : Ast.stmt_t) (env : environment) : unit =
   match stmt with
-  | Ast.Block stmts -> run_program stmts (create_environment (Some env))
+  | Ast.Block stmts -> run_program stmts (create_environment env)
   | Ast.Function (name, args, body) -> define_function name args body env
   | Ast.ReturnStmt expr -> return expr env
   | Ast.PrintStmt expr ->
@@ -164,11 +188,11 @@ and expression (ast : Ast.t) (env : environment) : value_t =
       binary left_expr token_type right_expr env
   | Ast.Logical (left_expr, token_type, right_expr) ->
       logical left_expr token_type right_expr env
-  | Ast.Variable name ->
+  | Ast.Variable name as expr ->
       let token : Tokens.t =
         { token_type = Tokens.IDENTIFIER; lexeme = name; line = 99 }
       in
-      get_var ~token env
+      get_var ~token ~expr env
 
 and logical left_expr token right_expr env =
   let left = expression left_expr env in
@@ -231,7 +255,7 @@ and call callee args token env : value_t =
         (Runtime_exn { token; message = "Can only call functions and classes." })
 
 and call_function fun_args fun_body args token closure env =
-  let func_enc = create_environment (Some closure) in
+  let func_enc = create_environment closure in
   let open List.Or_unequal_lengths in
   match List.zip fun_args args with
   | Ok arg_pairs -> (
@@ -280,6 +304,10 @@ let define_native_funcs env =
   define_var ~name:"clock" ~value:(NativeFunctionValue ("clock", 0)) env;
   env
 
-let run (program : Ast.program_t) : (unit, runtime_error) Result.t =
-  try Ok (create_environment None |> define_native_funcs |> run_program program)
+let run (program : Ast.program_t) (distances : Analyzer.th) :
+    (unit, runtime_error) Result.t =
+  try
+    Ok
+      (create_root_environment ~distances ()
+      |> define_native_funcs |> run_program program)
   with Runtime_exn runtime_error -> Error runtime_error

@@ -38,10 +38,10 @@ type token_type =
   | VAR
   | WHILE
   | EOF
-[@@deriving compare, equal, sexp]
+[@@deriving compare, equal, sexp, hash]
 
 type t = { token_type : token_type; lexeme : string; line : int }
-[@@deriving compare, equal, sexp]
+[@@deriving compare, equal, sexp, hash]
 
 val token_name : t -> string
 val literal : t -> string option
