@@ -93,6 +93,7 @@ let analyze_program_tl (program : Ast.program_t) : (t list, string) Result.t =
 
 let analyze_program (program : Ast.program_t) : (th, string) Result.t =
   let pp = statements program (create_scope ()) [] in
+  Stdlib.print_endline (sexp_of_tl pp |> Sexp.to_string_hum);
   let hasht : th = Hashtbl.create (module Ast) in
   List.map ~f:(fun (expr, dist) -> Hashtbl.set hasht ~key:expr ~data:dist) pp
   |> ignore;
