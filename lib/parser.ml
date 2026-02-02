@@ -204,7 +204,7 @@ and for_stmt (tokens : Tokens.t list) : Tokens.t list * Ast.stmt_t =
     | Some increment -> Ast.Block [ body; Ast.ExprStmt increment ]
     | None -> Ast.Block [ body ]
   in
-  (rest, Ast.ForStmt (init, cond, body))
+  (rest, Ast.Block [ Ast.ForStmt (init, cond, body) ])
 
 and block (tokens : Tokens.t list) (acc : Ast.program_t) :
     Tokens.t list * Ast.stmt_t =
