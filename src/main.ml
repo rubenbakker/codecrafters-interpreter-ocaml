@@ -72,8 +72,8 @@ let run_command filename =
       | Error error ->
           Stdlib.print_endline error;
           70
-      | Ok var_defs -> (
-          match Interpreter.run program var_defs with
+      | Ok _ -> (
+          match Interpreter.run program with
           | Ok _ -> 0
           | Error error ->
               Interpreter.error_to_string error |> Stdlib.prerr_endline;

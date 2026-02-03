@@ -1,12 +1,7 @@
 open! Base
 
 type environment_vars = (string, value_t) Hashtbl.t
-
-and environment = {
-  parent : environment option;
-  vars : environment_vars;
-  distances : Analyzer.th;
-}
+and environment = { parent : environment option; vars : environment_vars }
 
 and value_t =
   | BooleanValue of bool
@@ -22,16 +17,11 @@ exception Runtime_exn of runtime_error
 exception Notimplemented
 exception Return_exn of value_t
 
-let create_root_environment
-    ?(distances : Analyzer.th = Hashtbl.create (module Ast)) () : environment =
-  { parent = None; distances; vars = Hashtbl.create (module String) }
+let create_root_environment () : environment =
+  { parent = None; vars = Hashtbl.create (module String) }
 
 let create_environment (parent : environment) : environment =
-  {
-    parent = Some parent;
-    distances = parent.distances;
-    vars = Hashtbl.create (module String);
-  }
+  { parent = Some parent; vars = Hashtbl.create (module String) }
 
 let define_var ~(name : string) ~(value : value_t) (env : environment) =
   Hashtbl.set env.vars ~key:name ~data:value
@@ -55,13 +45,13 @@ let rec get_var_ ~(token : Tokens.t) ~(expr : Ast.t) (env : environment option)
 let rec find_env (env : environment) (distance : int option) : environment =
   match (distance, env.parent) with
   | None, None -> env
-  | None, Some _ -> env
+  | None, Some parent -> find_env parent None
   | Some 0, Some _ -> env
   | Some distance, Some parent -> find_env parent (Some (distance - 1))
   | Some _, None -> env
 
-let get_var ~(token : Tokens.t) ~(expr : Ast.t) (env : environment) : value_t =
-  let distance = Hashtbl.find env.distances expr in
+let get_var ~(token : Tokens.t) ~(expr : Ast.t) ~(distance : int option)
+    (env : environment) : value_t =
   let env = find_env env distance in
   get_var_ ~token ~expr (Some env)
 
@@ -83,9 +73,8 @@ let rec assign_var_ ~(token : Tokens.t) ~(value : value_t)
           Hashtbl.set env.vars ~key:token.lexeme ~data:value;
           value)
 
-let assign_var ~(token : Tokens.t) ~(expr : Ast.t) ~(value : value_t)
+let assign_var ~(token : Tokens.t) ~(value : value_t) ~(distance : int option)
     (env : environment) =
-  let distance = Hashtbl.find env.distances expr in
   let env = find_env env distance in
   assign_var_ ~token ~value (Some env)
 
@@ -153,21 +142,12 @@ and statement (stmt : Ast.stmt_t) (env : environment) : unit =
           | Some else_stmt -> statement else_stmt env
           | None -> ()))
   | Ast.WhileStmt (cond, body) -> perform_while cond body env
-  | Ast.ForStmt (init, cond, body) -> perform_for init cond body env
 
 and perform_while cond body env =
   match expression cond env |> is_truthy with
   | true ->
       statement body env;
       perform_while cond body env
-  | false -> ()
-
-and perform_for init cond body env =
-  (match init with Some init -> statement init env | None -> ());
-  match expression cond env |> is_truthy with
-  | true ->
-      statement body env;
-      perform_for None cond body env
   | false -> ()
 
 and return expr env =
@@ -181,8 +161,8 @@ and define_function name args body env =
 
 and expression (ast : Ast.t) (env : environment) : value_t =
   match ast with
-  | Ast.Assign (var, expr) ->
-      assign_var ~token:var ~expr:ast ~value:(expression expr env) env
+  | Ast.Assign (var, expr, distance) ->
+      assign_var ~token:var ~value:(expression expr env) ~distance:!distance env
   | Ast.Unary (token_type, expr) -> unary token_type expr env
   | Ast.Call (callee, args, token) -> call callee args token env
   | Ast.Literal value -> literal value
@@ -191,7 +171,8 @@ and expression (ast : Ast.t) (env : environment) : value_t =
       binary left_expr token_type right_expr env
   | Ast.Logical (left_expr, token_type, right_expr) ->
       logical left_expr token_type right_expr env
-  | Ast.Variable (_name, token) as expr -> get_var ~token ~expr env
+  | Ast.Variable (_name, token, distance) as expr ->
+      get_var ~token ~expr ~distance:!distance env
 
 and logical left_expr token right_expr env =
   let left = expression left_expr env in
@@ -303,10 +284,7 @@ let define_native_funcs env =
   define_var ~name:"clock" ~value:(NativeFunctionValue ("clock", 0)) env;
   env
 
-let run (program : Ast.program_t) (distances : Analyzer.th) :
-    (unit, runtime_error) Result.t =
+let run (program : Ast.program_t) : (unit, runtime_error) Result.t =
   try
-    Ok
-      (create_root_environment ~distances ()
-      |> define_native_funcs |> run_program program)
+    Ok (create_root_environment () |> define_native_funcs |> run_program program)
   with Runtime_exn runtime_error -> Error runtime_error

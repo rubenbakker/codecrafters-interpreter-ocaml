@@ -2,7 +2,6 @@ open! Base
 
 type t = Ast.t * int [@@deriving compare, equal, sexp]
 type tl = t list [@@deriving compare, equal, sexp]
-type th = (Ast.t, int) Hashtbl.t
 
 type var_t = Declared of string | Defined of string
 [@@deriving compare, equal, sexp]
@@ -19,22 +18,19 @@ let declare_var (scope : scope_t) (name : string) =
 let define_var (scope : scope_t) (name : string) =
   Hashtbl.set scope.vars ~key:name ~data:(Defined name)
 
-let rec resolve_local_var (scope : scope_t) (expr : Ast.t) (name : string)
-    (distance : int) : (Ast.t * int) option =
+let rec resolve_local_var (scope : scope_t) (name : string) (distance : int) :
+    int option =
   match Hashtbl.find scope.vars name with
-  | Some _ -> Some (expr, distance)
+  | Some _ -> Some distance
   | None -> (
       match scope.parent with
       | None -> None
-      | Some parent -> resolve_local_var parent expr name (distance + 1))
+      | Some parent -> resolve_local_var parent name (distance + 1))
 
-let resolve_var (scope : scope_t) (expr : Ast.t) (name : string) (acc : tl) : tl
-    =
-  match resolve_local_var scope expr name 0 with
-  | Some var_def -> var_def :: acc
-  | None -> acc
+let resolve_var (scope : scope_t) (name : string) : int option =
+  resolve_local_var scope name 0
 
-let rec statements (stmts : Ast.program_t) (scope : scope_t) (acc : tl) : tl =
+let rec statements (stmts : Ast.program_t) (scope : scope_t) (acc : tl) =
   match stmts with
   | [] -> List.rev acc
   | stmt :: rest -> statement stmt scope acc |> statements rest scope
@@ -55,12 +51,7 @@ and statement (stmt : Ast.stmt_t) (scope : scope_t) (acc : tl) : tl =
       match else_branch with
       | Some else_branch -> statement else_branch scope acc
       | None -> acc)
-  | Ast.WhileStmt (cond, stmt) ->
-      expression cond scope acc |> statement stmt scope
-  | Ast.ForStmt (init, cond, body) ->
-      let acc =
-        match init with Some init -> statement init scope acc | None -> acc
-      in
+  | Ast.WhileStmt (cond, body) ->
       expression cond scope acc |> statement body scope
   | Ast.PrintStmt stmt -> expression stmt scope acc
   | Ast.ReturnStmt expr -> expression expr scope acc
@@ -80,20 +71,19 @@ and expression (expr : Ast.t) (scope : scope_t) (acc : tl) : tl =
       expression expr1 scope acc |> expression expr2 scope
   | Ast.Logical (expr1, _, expr2) ->
       expression expr1 scope acc |> expression expr2 scope
-  | Ast.Assign (name_token, expr) as assign_expr ->
-      let acc = resolve_var scope assign_expr name_token.lexeme acc in
+  | Ast.Assign (name_token, expr, distance) ->
+      distance := resolve_var scope name_token.lexeme;
       expression expr scope acc
   | Ast.Grouping expr -> expression expr scope acc
   | Ast.Literal _ -> acc
-  | Ast.Variable (name, _) as expr -> resolve_var scope expr name acc
+  | Ast.Variable (name, _, distance) ->
+      distance := resolve_var scope name;
+      acc
   | Ast.Unary (_, expr) -> expression expr scope acc
 
 let analyze_program_tl (program : Ast.program_t) : (t list, string) Result.t =
   Ok (statements program (create_scope ()) [])
 
-let analyze_program (program : Ast.program_t) : (th, string) Result.t =
-  let pp = statements program (create_scope ()) [] in
-  let hasht : th = Hashtbl.create (module Ast) in
-  List.map ~f:(fun (expr, dist) -> Hashtbl.set hasht ~key:expr ~data:dist) pp
-  |> ignore;
-  Ok hasht
+let analyze_program (program : Ast.program_t) : (unit, string) Result.t =
+  statements program (create_scope ()) [] |> ignore;
+  Ok ()

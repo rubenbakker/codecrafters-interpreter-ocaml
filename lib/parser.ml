@@ -202,9 +202,12 @@ and for_stmt (tokens : Tokens.t list) : Tokens.t list * Ast.stmt_t =
   let body =
     match increment with
     | Some increment -> Ast.Block [ body; Ast.ExprStmt increment ]
-    | None -> Ast.Block [ body ]
+    | None -> body
   in
-  (rest, Ast.Block [ Ast.ForStmt (init, cond, body) ])
+  ( rest,
+    match init with
+    | None -> Ast.WhileStmt (cond, body)
+    | Some init -> Ast.Block [ init; Ast.WhileStmt (cond, body) ] )
 
 and block (tokens : Tokens.t list) (acc : Ast.program_t) :
     Tokens.t list * Ast.stmt_t =
@@ -225,8 +228,8 @@ and assignment (tokens : Tokens.t list) =
   | ({ token_type = Tokens.EQUAL; _ } as token) :: rest -> (
       let rest, value = assignment rest in
       match expr with
-      | Ast.Variable (name, _) ->
-          (rest, Ast.Assign ({ token with lexeme = name }, value))
+      | Ast.Variable (name, _, _) ->
+          (rest, Ast.Assign ({ token with lexeme = name }, value, ref None))
       | _ -> raise (Parse_exn { token; message = "Invalid assignment target." })
       )
   | _ -> (rest, expr)
@@ -374,7 +377,7 @@ and primary (tokens : Tokens.t list) : Tokens.t list * Ast.t =
   | { token_type = Tokens.STRING value; _ } :: rest ->
       (rest, Ast.Literal (Ast.LiteralString value))
   | ({ token_type = Tokens.IDENTIFIER; lexeme = name; _ } as token) :: rest ->
-      (rest, Ast.Variable (name, token))
+      (rest, Ast.Variable (name, token, ref None))
   | { token_type = Tokens.LEFT_PAREN; _ } :: rest ->
       let (rest : Tokens.t list), ast = expression rest in
       let rest =
