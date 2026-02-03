@@ -1,7 +1,8 @@
 open! Base
 
+type error_t = { token : Tokens.t; message : string } [@@deriving sexp]
+type error_list_t = error_t list [@@deriving sexp]
 type t = Ast.t * int [@@deriving compare, equal, sexp]
-type tl = t list [@@deriving compare, equal, sexp]
 
 type var_t = Declared of string | Defined of string
 [@@deriving compare, equal, sexp]
@@ -13,29 +14,51 @@ let create_scope ?(parent : scope_t option = None) () =
   { vars = Hashtbl.create (module String); parent }
 
 let declare_var (scope : scope_t) (name : string) =
-  Hashtbl.set scope.vars ~key:name ~data:(Declared name)
+  if Option.is_some scope.parent then
+    Hashtbl.set scope.vars ~key:name ~data:(Declared name)
+  else ()
 
 let define_var (scope : scope_t) (name : string) =
-  Hashtbl.set scope.vars ~key:name ~data:(Defined name)
+  if Option.is_some scope.parent then
+    Hashtbl.set scope.vars ~key:name ~data:(Defined name)
+  else ()
 
-let rec resolve_local_var (scope : scope_t) (name : string) (distance : int) :
-    int option =
+let error_to_string (error : error_t) =
+  Stdlib.Printf.sprintf "[line %d] %s" error.token.line error.message
+
+let rec resolve_local_var (scope : scope_t) (name : string) (token : Tokens.t)
+    (distance : int) : (int option, error_t) Result.t =
   match Hashtbl.find scope.vars name with
-  | Some _ -> Some distance
   | None -> (
       match scope.parent with
-      | None -> None
-      | Some parent -> resolve_local_var parent name (distance + 1))
+      | None -> Ok None
+      | Some parent -> resolve_local_var parent name token (distance + 1))
+  | Some var -> (
+      match var with
+      | Declared _ ->
+          Error
+            {
+              token;
+              message =
+                Stdlib.Printf.sprintf
+                  "Error at '%s': Can't read local variable in its own \
+                   initializer."
+                  name;
+            }
+      | Defined _ -> Ok (Some distance))
 
-let resolve_var (scope : scope_t) (name : string) : int option =
-  resolve_local_var scope name 0
+let resolve_var (scope : scope_t) (name : string) (token : Tokens.t) :
+    (int option, error_t) Result.t =
+  resolve_local_var scope name token 0
 
-let rec statements (stmts : Ast.program_t) (scope : scope_t) (acc : tl) =
+let rec statements (stmts : Ast.program_t) (scope : scope_t)
+    (acc : error_list_t) : error_list_t =
   match stmts with
   | [] -> List.rev acc
   | stmt :: rest -> statement stmt scope acc |> statements rest scope
 
-and statement (stmt : Ast.stmt_t) (scope : scope_t) (acc : tl) : tl =
+and statement (stmt : Ast.stmt_t) (scope : scope_t) (acc : error_list_t) :
+    error_list_t =
   match stmt with
   | Ast.Block stmts ->
       statements stmts (create_scope ~parent:(Some scope) ()) acc
@@ -56,11 +79,14 @@ and statement (stmt : Ast.stmt_t) (scope : scope_t) (acc : tl) : tl =
   | Ast.PrintStmt stmt -> expression stmt scope acc
   | Ast.ReturnStmt expr -> expression expr scope acc
   | Ast.VarStmt (name, expr) ->
+      declare_var scope name;
+      let result = expression expr scope acc in
       define_var scope name;
-      expression expr scope acc
+      result
   | Ast.ExprStmt expr -> expression expr scope acc
 
-and expression (expr : Ast.t) (scope : scope_t) (acc : tl) : tl =
+and expression (expr : Ast.t) (scope : scope_t) (acc : error_list_t) :
+    error_list_t =
   match expr with
   | Ast.Call (callee, args, _) ->
       let arg_defs =
@@ -72,18 +98,28 @@ and expression (expr : Ast.t) (scope : scope_t) (acc : tl) : tl =
   | Ast.Logical (expr1, _, expr2) ->
       expression expr1 scope acc |> expression expr2 scope
   | Ast.Assign (name_token, expr, distance) ->
-      distance := resolve_var scope name_token.lexeme;
+      let acc =
+        match resolve_var scope name_token.lexeme name_token with
+        | Ok d ->
+            distance := d;
+            acc
+        | Error err -> err :: acc
+      in
       expression expr scope acc
   | Ast.Grouping expr -> expression expr scope acc
   | Ast.Literal _ -> acc
-  | Ast.Variable (name, _, distance) ->
-      distance := resolve_var scope name;
-      acc
+  | Ast.Variable (name, token, distance) -> (
+      match resolve_var scope name token with
+      | Ok d ->
+          distance := d;
+          acc
+      | Error err -> err :: acc)
   | Ast.Unary (_, expr) -> expression expr scope acc
 
-let analyze_program_tl (program : Ast.program_t) : (t list, string) Result.t =
-  Ok (statements program (create_scope ()) [])
-
-let analyze_program (program : Ast.program_t) : (unit, string) Result.t =
-  statements program (create_scope ()) [] |> ignore;
-  Ok ()
+(* let analyze_program_tl (program : Ast.program_t) : (t list, string) Result.t = *)
+(*   Ok (statements program (create_scope ()) []) *)
+(**)
+let analyze_program (program : Ast.program_t) :
+    (Ast.program_t, error_list_t) Result.t =
+  let errors = statements program (create_scope ()) [] in
+  match errors with [] -> Ok program | _ -> Error errors

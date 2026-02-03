@@ -160,29 +160,35 @@ if (!isAdult) { print "not eligible for voting"; }
      (PrintStmt (Literal (LiteralString 1)))
      (VarStmt age (Literal (LiteralNumber 45)))
      (IfStmt
-      (Binary (Variable age) ((token_type LESS) (lexeme <) (line 7))
-       (Literal (LiteralNumber 18)))
+      (Binary (Variable age ((token_type IDENTIFIER) (lexeme age) (line 7)) ())
+       ((token_type LESS) (lexeme <) (line 7)) (Literal (LiteralNumber 18)))
       (Block
        ((ExprStmt
          (Assign ((token_type EQUAL) (lexeme stage) (line 7))
-          (Literal (LiteralString child))))))
+          (Literal (LiteralString child)) ()))))
       ())
      (IfStmt
-      (Binary (Variable age) ((token_type GREATER_EQUAL) (lexeme >=) (line 8))
+      (Binary (Variable age ((token_type IDENTIFIER) (lexeme age) (line 8)) ())
+       ((token_type GREATER_EQUAL) (lexeme >=) (line 8))
        (Literal (LiteralNumber 18)))
       (Block
        ((ExprStmt
          (Assign ((token_type EQUAL) (lexeme stage) (line 8))
-          (Literal (LiteralString adult))))))
+          (Literal (LiteralString adult)) ()))))
       ())
-     (PrintStmt (Variable stage))
+     (PrintStmt
+      (Variable stage ((token_type IDENTIFIER) (lexeme stage) (line 9)) ()))
      (PrintStmt (Literal (LiteralString "2 after stage")))
      (VarStmt isAdult
-      (Binary (Variable age) ((token_type GREATER_EQUAL) (lexeme >=) (line 11))
+      (Binary (Variable age ((token_type IDENTIFIER) (lexeme age) (line 11)) ())
+       ((token_type GREATER_EQUAL) (lexeme >=) (line 11))
        (Literal (LiteralNumber 18))))
-     (IfStmt (Variable isAdult)
+     (IfStmt
+      (Variable isAdult ((token_type IDENTIFIER) (lexeme isAdult) (line 12)) ())
       (Block ((PrintStmt (Literal (LiteralString "eligible for voting"))))) ())
-     (IfStmt (Unary ((token_type BANG) (lexeme !) (line 13)) (Variable isAdult))
+     (IfStmt
+      (Unary ((token_type BANG) (lexeme !) (line 13))
+       (Variable isAdult ((token_type IDENTIFIER) (lexeme isAdult) (line 13)) ()))
       (Block ((PrintStmt (Literal (LiteralString "not eligible for voting")))))
       ()))
     |}]

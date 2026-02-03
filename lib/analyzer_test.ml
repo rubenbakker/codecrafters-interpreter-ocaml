@@ -1,38 +1,5 @@
 open Base
 
-let%expect_test "global var isn't not in list" =
-  (match
-     Scanner.scan
-       {|
-        // This variable is used in the function `f` below.
-        var variable = "global";
-
-        {
-          fun f() {
-            print variable;
-          }
-
-          f(); // this should print "global"
-
-          // This variable declaration shouldn't affect
-          // the usage in `f` above.
-          var variable = "local";
-
-          f(); // this should still print "global"
-        }
-      |}
-     |> Scanner.get_tokens |> Parser.parse_program
-   with
-  | Ok r -> (
-      match Analyzer.analyze_program_tl r with
-      | Ok r ->
-          Analyzer.sexp_of_tl r |> Sexp.to_string_hum |> Stdlib.print_endline
-      | Error e -> Stdlib.print_endline e)
-  | Error e -> Stdlib.print_endline (Parser.format_error e));
-  [%expect {| (((Variable f) 0) ((Variable f) 0)) |}]
-
-open Base
-
 let%expect_test "block var is in list" =
   (match
      Scanner.scan
@@ -64,12 +31,39 @@ let%expect_test "block var is in list" =
      |> Scanner.get_tokens |> Parser.parse_program
    with
   | Ok r -> (
-      match Analyzer.analyze_program_tl r with
-      | Ok r ->
-          Analyzer.sexp_of_tl r |> Sexp.to_string_hum |> Stdlib.print_endline
-      | Error e -> Stdlib.print_endline e)
+      match Analyzer.analyze_program r with
+      | Ok p ->
+          p |> Ast.sexp_of_program_t |> Sexp.to_string_hum
+          |> Stdlib.print_endline
+      | Error _ -> Stdlib.print_endline "error")
   | Error e -> Stdlib.print_endline (Parser.format_error e));
   [%expect {|
-    (((Variable variable) 0) ((Variable f) 0) ((Variable f) 0)
-     ((Literal (LiteralNumber 17)) 2) ((Variable x) 1) ((Variable fa) 0))
+    ((VarStmt variable (Literal (LiteralString global)))
+     (Block
+      ((VarStmt x (Literal (LiteralNumber 15)))
+       (Function ((token_type IDENTIFIER) (lexeme f) (line 7))
+        (((token_type IDENTIFIER) (lexeme fa) (line 7)))
+        ((PrintStmt
+          (Variable fa ((token_type IDENTIFIER) (lexeme fa) (line 8)) (0)))
+         (PrintStmt
+          (Variable variable ((token_type IDENTIFIER) (lexeme variable) (line 9))
+           (2)))
+         (PrintStmt
+          (Variable x ((token_type IDENTIFIER) (lexeme x) (line 10)) (1)))
+         (Block
+          ((ExprStmt
+            (Assign ((token_type EQUAL) (lexeme x) (line 12))
+             (Literal (LiteralNumber 17)) (2)))))))
+       (ExprStmt
+        (Call (Variable f ((token_type IDENTIFIER) (lexeme f) (line 16)) (0))
+         ((Literal (LiteralString hallo)))
+         ((token_type LEFT_PAREN) (lexeme "(") (line 16))))
+       (VarStmt variable (Literal (LiteralString local)))
+       (ExprStmt
+        (Call (Variable f ((token_type IDENTIFIER) (lexeme f) (line 22)) (0))
+         ((Literal (LiteralString hello)))
+         ((token_type LEFT_PAREN) (lexeme "(") (line 22))))
+       (PrintStmt
+        (Variable variable ((token_type IDENTIFIER) (lexeme variable) (line 23))
+         (0))))))
     |}]
