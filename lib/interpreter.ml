@@ -131,7 +131,7 @@ and statement (stmt : Ast.stmt_t) (env : environment) : unit =
   | Ast.ReturnStmt expr -> return expr env
   | Ast.PrintStmt expr ->
       expression expr env |> value_to_string |> Stdlib.print_endline
-  | Ast.VarStmt (name, expr) ->
+  | Ast.VarStmt (name, expr, _) ->
       define_var ~name ~value:(expression expr env) env
   | Ast.ExprStmt expr -> expression expr env |> value_to_string |> ignore
   | Ast.IfStmt (cond, when_stmt, else_stmt) -> (

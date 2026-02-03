@@ -13,12 +13,23 @@ type scope_t = { vars : vars_t; parent : scope_t option }
 let create_scope ?(parent : scope_t option = None) () =
   { vars = Hashtbl.create (module String); parent }
 
-let declare_var (scope : scope_t) (name : string) =
+let declare_var (scope : scope_t) (name : string) (token : Tokens.t) =
   if Option.is_some scope.parent then
-    Hashtbl.set scope.vars ~key:name ~data:(Declared name)
-  else ()
+    match Hashtbl.find scope.vars name with
+    | None -> Ok (Hashtbl.set scope.vars ~key:name ~data:(Declared name))
+    | Some _ ->
+        Error
+          {
+            token;
+            message =
+              Stdlib.Printf.sprintf
+                "Error at '%s': Already a variable with this name in this \
+                 scope."
+                name;
+          }
+  else Ok ()
 
-let define_var (scope : scope_t) (name : string) =
+let define_var (scope : scope_t) (name : string) : unit =
   if Option.is_some scope.parent then
     Hashtbl.set scope.vars ~key:name ~data:(Defined name)
   else ()
@@ -63,11 +74,23 @@ and statement (stmt : Ast.stmt_t) (scope : scope_t) (acc : error_list_t) :
   | Ast.Block stmts ->
       statements stmts (create_scope ~parent:(Some scope) ()) acc
   | Ast.Function (fun_name, args, body) ->
+      let acc =
+        match declare_var scope fun_name.lexeme fun_name with
+        | Ok _ -> acc
+        | Error error -> error :: acc
+      in
       define_var scope fun_name.lexeme;
       let scope = create_scope ~parent:(Some scope) () in
-      List.map args ~f:(fun arg_token -> define_var scope arg_token.lexeme)
-      |> ignore;
-      statements body scope acc
+      let arg_errors =
+        List.map args ~f:(fun arg_token ->
+            match declare_var scope arg_token.lexeme arg_token with
+            | Ok () ->
+                define_var scope arg_token.lexeme;
+                None
+            | Error error -> Some error)
+        |> List.filter_opt |> List.rev
+      in
+      statements body scope (List.concat [ arg_errors; acc ])
   | Ast.IfStmt (cond, branch, else_branch) -> (
       let acc = expression cond scope acc in
       let acc = statement branch scope acc in
@@ -78,8 +101,12 @@ and statement (stmt : Ast.stmt_t) (scope : scope_t) (acc : error_list_t) :
       expression cond scope acc |> statement body scope
   | Ast.PrintStmt stmt -> expression stmt scope acc
   | Ast.ReturnStmt expr -> expression expr scope acc
-  | Ast.VarStmt (name, expr) ->
-      declare_var scope name;
+  | Ast.VarStmt (name, expr, token) ->
+      let acc =
+        match declare_var scope name token with
+        | Ok () -> acc
+        | Error error -> error :: acc
+      in
       let result = expression expr scope acc in
       define_var scope name;
       result

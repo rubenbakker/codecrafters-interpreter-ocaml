@@ -40,19 +40,20 @@ and declaration (tokens : Tokens.t list) : Tokens.t list * Ast.stmt_t =
     :: { token_type = Tokens.IDENTIFIER; lexeme = name; _ }
     :: rest -> (
       match rest with
-      | { token_type = Tokens.EQUAL; _ } :: rest ->
+      | ({ token_type = Tokens.EQUAL; _ } as token) :: rest ->
           let rest, expr = expression rest in
           let rest =
             consume_token rest ~tt:Tokens.SEMICOLON
               ~error:"Expect ';' after expression."
           in
-          (rest, Ast.VarStmt (name, expr))
+          (rest, Ast.VarStmt (name, expr, token))
       | _ ->
           let rest =
             consume_token rest ~tt:Tokens.SEMICOLON
               ~error:"Expect ';' after expression."
           in
-          (rest, Ast.VarStmt (name, Ast.Literal Ast.LiteralNil)))
+          ( rest,
+            Ast.VarStmt (name, Ast.Literal Ast.LiteralNil, List.hd_exn rest) ))
   | rest -> statement rest
 
 and function_stmt (name_token : Tokens.t) (tokens : Tokens.t list) :
