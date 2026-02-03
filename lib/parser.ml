@@ -124,17 +124,17 @@ and statement (tokens : Tokens.t list) : Tokens.t list * Ast.stmt_t =
           ~error:"Expect ';' after expression."
       in
       (rest, Ast.PrintStmt expr)
-  | { token_type = Tokens.RETURN; _ }
+  | ({ token_type = Tokens.RETURN; _ } as token)
     :: { token_type = Tokens.SEMICOLON; _ }
     :: rest ->
-      (rest, Ast.ReturnStmt (Ast.Literal Ast.LiteralNil))
-  | { token_type = Tokens.RETURN; _ } :: rest ->
+      (rest, Ast.ReturnStmt (Ast.Literal Ast.LiteralNil, token))
+  | ({ token_type = Tokens.RETURN; _ } as token) :: rest ->
       let rest, expr = expression rest in
       let rest =
         consume_token rest ~tt:Tokens.SEMICOLON
           ~error:"Expect ';' after expression."
       in
-      (rest, Ast.ReturnStmt expr)
+      (rest, Ast.ReturnStmt (expr, token))
   | rest ->
       let rest, expr = expression rest in
       let rest =

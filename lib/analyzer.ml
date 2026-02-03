@@ -8,10 +8,22 @@ type var_t = Declared of string | Defined of string
 [@@deriving compare, equal, sexp]
 
 type vars_t = (string, var_t) Hashtbl.t
-type scope_t = { vars : vars_t; parent : scope_t option }
+type scope_type_t = Inherit | Function [@@deriving equal, compare]
 
-let create_scope ?(parent : scope_t option = None) () =
-  { vars = Hashtbl.create (module String); parent }
+type scope_t = {
+  vars : vars_t;
+  parent : scope_t option;
+  scope_type : scope_type_t;
+}
+
+let create_scope ?(parent : scope_t option = None)
+    ?(scope_type : scope_type_t = Inherit) () =
+  let scope_type =
+    match (scope_type, parent) with
+    | Inherit, Some parent -> parent.scope_type
+    | _, _ -> scope_type
+  in
+  { vars = Hashtbl.create (module String); parent; scope_type }
 
 let declare_var (scope : scope_t) (name : string) (token : Tokens.t) =
   if Option.is_some scope.parent then
@@ -80,7 +92,7 @@ and statement (stmt : Ast.stmt_t) (scope : scope_t) (acc : error_list_t) :
         | Error error -> error :: acc
       in
       define_var scope fun_name.lexeme;
-      let scope = create_scope ~parent:(Some scope) () in
+      let scope = create_scope ~scope_type:Function ~parent:(Some scope) () in
       let arg_errors =
         List.map args ~f:(fun arg_token ->
             match declare_var scope arg_token.lexeme arg_token with
@@ -100,7 +112,18 @@ and statement (stmt : Ast.stmt_t) (scope : scope_t) (acc : error_list_t) :
   | Ast.WhileStmt (cond, body) ->
       expression cond scope acc |> statement body scope
   | Ast.PrintStmt stmt -> expression stmt scope acc
-  | Ast.ReturnStmt expr -> expression expr scope acc
+  | Ast.ReturnStmt (expr, token) ->
+      let acc =
+        match scope.scope_type with
+        | Function -> acc
+        | Inherit ->
+            {
+              token;
+              message = "Error at 'return': Can't return from top-level code.";
+            }
+            :: acc
+      in
+      expression expr scope acc
   | Ast.VarStmt (name, expr, token) ->
       let acc =
         match declare_var scope name token with
