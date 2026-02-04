@@ -21,6 +21,7 @@ type t =
 type stmt_t =
   | Block of stmt_t list
   | Function of Tokens.t * Tokens.t list * stmt_t list
+  | ClassStmt of Tokens.t
   | IfStmt of t * stmt_t * stmt_t option
   | WhileStmt of t * stmt_t
   | PrintStmt of t
@@ -132,6 +133,7 @@ let rec program_to_string (program : program_t) : string =
             (program_to_string [ body ])
       | VarStmt (name, init_expr, _) ->
           Stdlib.Printf.sprintf "(VAR %s = %s)" name (to_string init_expr)
+      | ClassStmt name -> Stdlib.Printf.sprintf "(CLASS %s)" name.lexeme
       | PrintStmt expr -> Stdlib.Printf.sprintf "(PRINT %s)\n" (to_string expr)
       | ReturnStmt (expr, _) ->
           Stdlib.Printf.sprintf "(RETURN %s)\n" (to_string expr)

@@ -9,6 +9,7 @@ and value_t =
   | StringValue of string
   | NativeFunctionValue of string * int
   | FunctionValue of Tokens.t * Tokens.t list * Ast.stmt_t list * environment
+  | ClassValue of Tokens.t
   | NilValue
 
 type runtime_error = { token : Tokens.t; message : string }
@@ -88,6 +89,7 @@ let is_truthy value =
   | StringValue _ -> true
   | NativeFunctionValue _ -> true
   | FunctionValue (_, _, _, _) -> true
+  | ClassValue _ -> true
   | NilValue -> false
 
 let is_equal left right =
@@ -112,6 +114,7 @@ let value_to_string value =
   match value with
   | NativeFunctionValue (name, _) -> Stdlib.Printf.sprintf "<fn %s>" name
   | FunctionValue (name, _, _, _) -> Stdlib.Printf.sprintf "<fn %s>" name.lexeme
+  | ClassValue name -> name.lexeme
   | BooleanValue b -> if b then "true" else "false"
   | NumberValue n -> number_to_string n
   | StringValue s -> s
@@ -128,6 +131,7 @@ and statement (stmt : Ast.stmt_t) (env : environment) : unit =
   match stmt with
   | Ast.Block stmts -> run_program stmts (create_environment env)
   | Ast.Function (name, args, body) -> define_function name args body env
+  | Ast.ClassStmt name_token -> define_class name_token env
   | Ast.ReturnStmt (expr, _) -> return expr env
   | Ast.PrintStmt expr ->
       expression expr env |> value_to_string |> Stdlib.print_endline
@@ -153,6 +157,9 @@ and perform_while cond body env =
 and return expr env =
   let return_value = expression expr env in
   raise (Return_exn return_value)
+
+and define_class name_token env =
+  define_var ~name:name_token.lexeme ~value:(ClassValue name_token) env
 
 and define_function name args body env =
   define_var ~name:name.lexeme

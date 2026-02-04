@@ -31,13 +31,14 @@ let%expect_test "block var is in list" =
      |> Scanner.get_tokens |> Parser.parse_program
    with
   | Ok r -> (
-      match Analyzer.analyze_program r with
+      match Resolver.analyze_program r with
       | Ok p ->
           p |> Ast.sexp_of_program_t |> Sexp.to_string_hum
           |> Stdlib.print_endline
       | Error _ -> Stdlib.print_endline "error")
   | Error e -> Stdlib.print_endline (Parser.format_error e));
-  [%expect {|
+  [%expect
+    {|
     ((VarStmt variable (Literal (LiteralString global)))
      (Block
       ((VarStmt x (Literal (LiteralNumber 15)))

@@ -68,10 +68,10 @@ let parse_program_command filename =
 
 let run_command filename =
   parse_program filename (fun program ->
-      match Analyzer.analyze_program program with
+      match Resolver.analyze_program program with
       | Error errors ->
           List.map errors ~f:(fun err ->
-              Analyzer.error_to_string err |> Stdlib.prerr_endline)
+              Resolver.error_to_string err |> Stdlib.prerr_endline)
           |> ignore;
           65
       | Ok _ -> (

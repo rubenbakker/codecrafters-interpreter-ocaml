@@ -30,6 +30,10 @@ and declarations (tokens : Tokens.t list) (acc : Ast.program_t) :
 
 and declaration (tokens : Tokens.t list) : Tokens.t list * Ast.stmt_t =
   match tokens with
+  | { token_type = Tokens.CLASS; _ }
+    :: ({ token_type = Tokens.IDENTIFIER; _ } as name_token)
+    :: rest ->
+      class_stmt name_token rest
   | { token_type = Tokens.FUN; _ }
     :: ({ token_type = Tokens.IDENTIFIER; _ } as name_token)
     :: rest ->
@@ -56,6 +60,22 @@ and declaration (tokens : Tokens.t list) : Tokens.t list * Ast.stmt_t =
             Ast.VarStmt (name, Ast.Literal Ast.LiteralNil, List.hd_exn rest) ))
   | rest -> statement rest
 
+and class_stmt (name_token : Tokens.t) (tokens : Tokens.t list) :
+    Tokens.t list * Ast.stmt_t =
+  match tokens with
+  | { token_type = Tokens.LEFT_BRACE; _ }
+    :: { token_type = Tokens.RIGHT_BRACE; _ }
+    :: rest ->
+      (rest, ClassStmt name_token)
+  | { token_type = Tokens.LEFT_BRACE; _ } :: _ ->
+      raise
+        (Parse_exn
+           { token = name_token; message = "Expect '}' at end of class" })
+  | _ ->
+      raise
+        (Parse_exn
+           { token = name_token; message = "Expect '{' after class name" })
+
 and function_stmt (name_token : Tokens.t) (tokens : Tokens.t list) :
     Tokens.t list * Ast.stmt_t =
   match tokens with
@@ -76,7 +96,7 @@ and function_stmt (name_token : Tokens.t) (tokens : Tokens.t list) :
   | _ ->
       raise
         (Parse_exn
-           { token = name_token; message = "Expect '(' after function name.)" })
+           { token = name_token; message = "Expect '(' after function name." })
 
 and function_args (tokens : Tokens.t list) (acc : Tokens.t list) :
     Tokens.t list * Tokens.t list =

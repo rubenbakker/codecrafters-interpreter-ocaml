@@ -103,6 +103,15 @@ and statement (stmt : Ast.stmt_t) (scope : scope_t) (acc : error_list_t) :
         |> List.filter_opt |> List.rev
       in
       statements body scope (List.concat [ arg_errors; acc ])
+  | Ast.ClassStmt name_token ->
+      let acc =
+        match declare_var scope name_token.lexeme name_token with
+        | Ok _ ->
+            define_var scope name_token.lexeme;
+            acc
+        | Error error -> error :: acc
+      in
+      acc
   | Ast.IfStmt (cond, branch, else_branch) -> (
       let acc = expression cond scope acc in
       let acc = statement branch scope acc in
