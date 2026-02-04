@@ -251,6 +251,8 @@ and assignment (tokens : Tokens.t list) =
       match expr with
       | Ast.Variable (name, _, _) ->
           (rest, Ast.Assign ({ token with lexeme = name }, value, ref None))
+      | Ast.GetProperty (instance, name_token) ->
+          (rest, Ast.SetProperty (instance, name_token, value))
       | _ -> raise (Parse_exn { token; message = "Invalid assignment target." })
       )
   | _ -> (rest, expr)
@@ -363,6 +365,10 @@ and call (tokens : Tokens.t list) : Tokens.t list * Ast.t =
 and call_only (tokens : Tokens.t list) (callee : Ast.t) : Tokens.t list * Ast.t
     =
   match tokens with
+  | { token_type = Tokens.DOT; _ }
+    :: ({ token_type = Tokens.IDENTIFIER; _ } as token_name)
+    :: rest ->
+      call_only rest (Ast.GetProperty (callee, token_name))
   | ({ token_type = Tokens.LEFT_PAREN; _ } as token) :: rest ->
       let rest, args = call_args rest [] in
       call_only rest (Ast.Call (callee, args, token))

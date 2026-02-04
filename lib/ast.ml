@@ -9,6 +9,8 @@ type literal_t =
 
 type t =
   | Call of t * t list * Tokens.t
+  | GetProperty of t * Tokens.t
+  | SetProperty of t * Tokens.t * t
   | Binary of t * Tokens.t * t
   | Logical of t * Tokens.t * t
   | Assign of Tokens.t * t * int option ref
@@ -90,6 +92,11 @@ let rec to_string (ast : t) : string =
         (to_string left_expr) (to_string right_expr)
   | Call (callee, _, _) ->
       Stdlib.Printf.sprintf "(CALLEE %s)" (to_string callee)
+  | GetProperty (expr, name_token) ->
+      Stdlib.Printf.sprintf "(GET %s %s)" (to_string expr) name_token.lexeme
+  | SetProperty (instance, name_token, expr) ->
+      Stdlib.Printf.sprintf "(GET %s %s %s)" (to_string instance)
+        name_token.lexeme (to_string expr)
   | Assign (name, expr, _) ->
       Stdlib.Printf.sprintf "(ASSIGN %s %s)" name.lexeme (to_string expr)
   | Grouping expr -> Stdlib.Printf.sprintf "(group %s)" (to_string expr)

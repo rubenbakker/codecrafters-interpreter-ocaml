@@ -152,6 +152,9 @@ and expression (expr : Ast.t) (scope : scope_t) (acc : error_list_t) :
         List.map args ~f:(fun expr -> expression expr scope []) |> List.concat
       in
       expression callee scope (List.concat [ acc; arg_defs ])
+  | Ast.GetProperty (instance, _) -> expression instance scope acc
+  | Ast.SetProperty (instance, _, expr) ->
+      expression instance scope acc |> expression expr scope
   | Ast.Binary (expr1, _, expr2) ->
       expression expr1 scope acc |> expression expr2 scope
   | Ast.Logical (expr1, _, expr2) ->

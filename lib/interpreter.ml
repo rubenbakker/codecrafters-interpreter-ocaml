@@ -11,7 +11,7 @@ and value_t =
   | NativeFunctionValue of string * int
   | FunctionValue of Tokens.t * Tokens.t list * Ast.stmt_t list * environment
   | ClassValue of class_t
-  | ClassInstanceValue of class_t
+  | ClassInstanceValue of class_t * environment_vars
   | NilValue
 
 type runtime_error = { token : Tokens.t; message : string }
@@ -118,7 +118,7 @@ let value_to_string value =
   | NativeFunctionValue (name, _) -> Stdlib.Printf.sprintf "<fn %s>" name
   | FunctionValue (name, _, _, _) -> Stdlib.Printf.sprintf "<fn %s>" name.lexeme
   | ClassValue def -> def.name_token.lexeme
-  | ClassInstanceValue def ->
+  | ClassInstanceValue (def, _) ->
       Stdlib.Printf.sprintf "%s instance" def.name_token.lexeme
   | BooleanValue b -> if b then "true" else "false"
   | NumberValue n -> number_to_string n
@@ -177,6 +177,10 @@ and expression (ast : Ast.t) (env : environment) : value_t =
       assign_var ~token:var ~value:(expression expr env) ~distance:!distance env
   | Ast.Unary (token_type, expr) -> unary token_type expr env
   | Ast.Call (callee, args, token) -> call callee args token env
+  | Ast.GetProperty (instance, name_token) ->
+      get_instance_property instance name_token env
+  | Ast.SetProperty (instance, name_token, expr) ->
+      set_instance_property instance name_token expr env
   | Ast.Literal value -> literal value
   | Ast.Grouping ast -> expression ast env
   | Ast.Binary (left_expr, token_type, right_expr) ->
@@ -220,6 +224,36 @@ and binary left_expr token right_expr env =
   | _, _, _ ->
       raise (Runtime_exn { token; message = "Operands must be numbers" })
 
+and get_instance_property instance name_token env : value_t =
+  match expression instance env with
+  | ClassInstanceValue (_clazz, ivars) -> (
+      match Hashtbl.find ivars name_token.lexeme with
+      | Some value -> value
+      | None ->
+          raise
+            (Runtime_exn
+               {
+                 token = name_token;
+                 message =
+                   Stdlib.Printf.sprintf "Undefined property '%s'."
+                     name_token.lexeme;
+               }))
+  | _ ->
+      raise
+        (Runtime_exn
+           { token = name_token; message = "Only instances have properties." })
+
+and set_instance_property instance name_token expr env : value_t =
+  match expression instance env with
+  | ClassInstanceValue (_clazz, ivars) ->
+      let value = expression expr env in
+      Hashtbl.set ivars ~key:name_token.lexeme ~data:value;
+      value
+  | _ ->
+      raise
+        (Runtime_exn
+           { token = name_token; message = "Only instances have fields." })
+
 and call callee args token env : value_t =
   match expression callee env with
   | NativeFunctionValue ("clock", arity) ->
@@ -247,7 +281,8 @@ and call callee args token env : value_t =
       raise
         (Runtime_exn { token; message = "Can only call functions and classes." })
 
-and create_class_instance (clazz : class_t) : value_t = ClassInstanceValue clazz
+and create_class_instance (clazz : class_t) : value_t =
+  ClassInstanceValue (clazz, Hashtbl.create (module String))
 
 and call_function fun_args fun_body args token closure env =
   let func_enc = create_environment closure in
