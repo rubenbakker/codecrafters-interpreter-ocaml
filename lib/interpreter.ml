@@ -2,6 +2,7 @@ open! Base
 
 type environment_vars = (string, value_t) Hashtbl.t
 and environment = { parent : environment option; vars : environment_vars }
+and class_t = { name_token : Tokens.t }
 
 and value_t =
   | BooleanValue of bool
@@ -9,7 +10,8 @@ and value_t =
   | StringValue of string
   | NativeFunctionValue of string * int
   | FunctionValue of Tokens.t * Tokens.t list * Ast.stmt_t list * environment
-  | ClassValue of Tokens.t
+  | ClassValue of class_t
+  | ClassInstanceValue of class_t
   | NilValue
 
 type runtime_error = { token : Tokens.t; message : string }
@@ -90,6 +92,7 @@ let is_truthy value =
   | NativeFunctionValue _ -> true
   | FunctionValue (_, _, _, _) -> true
   | ClassValue _ -> true
+  | ClassInstanceValue _ -> true
   | NilValue -> false
 
 let is_equal left right =
@@ -114,7 +117,9 @@ let value_to_string value =
   match value with
   | NativeFunctionValue (name, _) -> Stdlib.Printf.sprintf "<fn %s>" name
   | FunctionValue (name, _, _, _) -> Stdlib.Printf.sprintf "<fn %s>" name.lexeme
-  | ClassValue name -> name.lexeme
+  | ClassValue def -> def.name_token.lexeme
+  | ClassInstanceValue def ->
+      Stdlib.Printf.sprintf "%s instance" def.name_token.lexeme
   | BooleanValue b -> if b then "true" else "false"
   | NumberValue n -> number_to_string n
   | StringValue s -> s
@@ -159,7 +164,7 @@ and return expr env =
   raise (Return_exn return_value)
 
 and define_class name_token env =
-  define_var ~name:name_token.lexeme ~value:(ClassValue name_token) env
+  define_var ~name:name_token.lexeme ~value:(ClassValue { name_token }) env
 
 and define_function name args body env =
   define_var ~name:name.lexeme
@@ -237,9 +242,12 @@ and call callee args token env : value_t =
            })
   | FunctionValue (_fun_name, fun_args, fun_body, closure) ->
       call_function fun_args fun_body args token closure env
+  | ClassValue clazz -> create_class_instance clazz
   | _ ->
       raise
         (Runtime_exn { token; message = "Can only call functions and classes." })
+
+and create_class_instance (clazz : class_t) : value_t = ClassInstanceValue clazz
 
 and call_function fun_args fun_body args token closure env =
   let func_enc = create_environment closure in
