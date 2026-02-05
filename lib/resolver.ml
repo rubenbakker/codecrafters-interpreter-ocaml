@@ -113,9 +113,6 @@ and statement (stmt : Ast.stmt_t) (scope : scope_t) (acc : error_list_t) :
       statements body scope (List.concat [ arg_errors; acc ])
   | Ast.ClassStmt (name_token, methods) ->
       let rec resolve_methods methods scope acc =
-        (match scope.class_type with
-        | InsideClass -> Stdlib.prerr_endline "*inside_class"
-        | InheritClassType -> Stdlib.prerr_endline "*outside class");
         match methods with
         | [] -> acc
         | m :: rest ->
@@ -131,7 +128,6 @@ and statement (stmt : Ast.stmt_t) (scope : scope_t) (acc : error_list_t) :
             in
             define_var class_scope "this";
             let x = resolve_methods methods class_scope acc in
-            Stdlib.prerr_endline "after methods";
             x
         | Error error -> error :: acc
       in
@@ -201,12 +197,8 @@ and expression (expr : Ast.t) (scope : scope_t) (acc : error_list_t) :
           acc
       | Error err -> err :: acc)
   | Ast.This (token, distance) -> (
-      (match scope.class_type with
-      | InsideClass -> Stdlib.prerr_endline "inside_class"
-      | InheritClassType -> Stdlib.prerr_endline "outside class");
       match scope.class_type with
       | InsideClass -> (
-          Stdlib.print_endline "this - inside class";
           match resolve_var scope token.lexeme token with
           | Ok d ->
               distance := d;
