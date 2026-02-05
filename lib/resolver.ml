@@ -121,6 +121,9 @@ and statement (stmt : Ast.stmt_t) (scope : scope_t) (acc : error_list_t) :
             let class_scope =
               create_scope ~parent:(Some scope) ~class_type:InsideClass ()
             in
+            (match class_scope.class_type with
+            | InsideClass -> Stdlib.print_endline "inside_class"
+            | OutsideClass -> Stdlib.print_endline "outside class");
             define_var class_scope "this";
             resolve_methods methods class_scope acc
         | Error error -> error :: acc
