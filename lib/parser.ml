@@ -419,6 +419,8 @@ and primary (tokens : Tokens.t list) : Tokens.t list * Ast.t =
       (rest, Ast.Literal (Ast.LiteralNumber value))
   | { token_type = Tokens.STRING value; _ } :: rest ->
       (rest, Ast.Literal (Ast.LiteralString value))
+  | ({ token_type = Tokens.THIS; _ } as this_token) :: rest ->
+      (rest, Ast.This (this_token, ref None))
   | ({ token_type = Tokens.IDENTIFIER; lexeme = name; _ } as token) :: rest ->
       (rest, Ast.Variable (name, token, ref None))
   | { token_type = Tokens.LEFT_PAREN; _ } :: rest ->

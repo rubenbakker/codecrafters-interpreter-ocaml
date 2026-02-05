@@ -4,6 +4,7 @@ type vars_t = (string, value_t) Hashtbl.t
 and environment = { parent : environment option; vars : vars_t }
 and class_t = { name_token : Tokens.t; methods : methods_t }
 and methods_t = (string, function_t) Hashtbl.t
+and instance_t = { clazz : class_t; ivars : vars_t }
 
 and function_t = {
   name_token : Tokens.t;
@@ -19,7 +20,7 @@ and value_t =
   | NativeFunctionValue of string * int
   | FunctionValue of function_t
   | ClassValue of class_t
-  | ClassInstanceValue of class_t * vars_t
+  | InstanceValue of instance_t
   | NilValue
 
 type runtime_error = { token : Tokens.t; message : string }
@@ -100,7 +101,7 @@ let is_truthy value =
   | NativeFunctionValue _ -> true
   | FunctionValue _ -> true
   | ClassValue _ -> true
-  | ClassInstanceValue _ -> true
+  | InstanceValue _ -> true
   | NilValue -> false
 
 let is_equal left right =
@@ -127,8 +128,8 @@ let value_to_string value =
   | FunctionValue { name_token; _ } ->
       Stdlib.Printf.sprintf "<fn %s>" name_token.lexeme
   | ClassValue def -> def.name_token.lexeme
-  | ClassInstanceValue (def, _) ->
-      Stdlib.Printf.sprintf "%s instance" def.name_token.lexeme
+  | InstanceValue instance ->
+      Stdlib.Printf.sprintf "%s instance" instance.clazz.name_token.lexeme
   | BooleanValue b -> if b then "true" else "false"
   | NumberValue n -> number_to_string n
   | StringValue s -> s
@@ -211,6 +212,8 @@ and expression (ast : Ast.t) (env : environment) : value_t =
       logical left_expr token_type right_expr env
   | Ast.Variable (_name, token, distance) as expr ->
       get_var ~token ~expr ~distance:!distance env
+  | Ast.This (name_token, distance) as expr ->
+      get_var ~token:name_token ~expr ~distance:!distance env
 
 and logical left_expr token right_expr env =
   let left = expression left_expr env in
@@ -251,12 +254,15 @@ and find_method (clazz : class_t) (name_token : Tokens.t) : function_t option =
 
 and get_instance_property instance name_token env : value_t =
   match expression instance env with
-  | ClassInstanceValue (clazz, ivars) -> (
-      match Hashtbl.find ivars name_token.lexeme with
+  | InstanceValue instance as instance_value -> (
+      match Hashtbl.find instance.ivars name_token.lexeme with
       | Some value -> value
       | None -> (
-          match find_method clazz name_token with
-          | Some m -> FunctionValue m
+          match find_method instance.clazz name_token with
+          | Some m ->
+              let closure = create_environment env in
+              define_var ~name:"this" ~value:instance_value closure;
+              FunctionValue { m with closure }
           | None ->
               raise
                 (Runtime_exn
@@ -273,9 +279,9 @@ and get_instance_property instance name_token env : value_t =
 
 and set_instance_property instance name_token expr env : value_t =
   match expression instance env with
-  | ClassInstanceValue (_clazz, ivars) ->
+  | InstanceValue instance ->
       let value = expression expr env in
-      Hashtbl.set ivars ~key:name_token.lexeme ~data:value;
+      Hashtbl.set instance.ivars ~key:name_token.lexeme ~data:value;
       value
   | _ ->
       raise
@@ -309,7 +315,7 @@ and call callee args token env : value_t =
         (Runtime_exn { token; message = "Can only call functions and classes." })
 
 and create_class_instance (clazz : class_t) : value_t =
-  ClassInstanceValue (clazz, Hashtbl.create (module String))
+  InstanceValue { clazz; ivars = Hashtbl.create (module String) }
 
 and call_function fun_args fun_body args token closure env =
   let func_enc = create_environment closure in

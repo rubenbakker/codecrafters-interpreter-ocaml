@@ -115,7 +115,9 @@ and statement (stmt : Ast.stmt_t) (scope : scope_t) (acc : error_list_t) :
         match declare_var scope name_token.lexeme name_token with
         | Ok _ ->
             define_var scope name_token.lexeme;
-            resolve_methods methods scope acc
+            let class_scope = create_scope ~parent:(Some scope) () in
+            define_var class_scope "this";
+            resolve_methods methods class_scope acc
         | Error error -> error :: acc
       in
       acc
@@ -179,6 +181,12 @@ and expression (expr : Ast.t) (scope : scope_t) (acc : error_list_t) :
   | Ast.Literal _ -> acc
   | Ast.Variable (name, token, distance) -> (
       match resolve_var scope name token with
+      | Ok d ->
+          distance := d;
+          acc
+      | Error err -> err :: acc)
+  | Ast.This (token, distance) -> (
+      match resolve_var scope token.lexeme token with
       | Ok d ->
           distance := d;
           acc
