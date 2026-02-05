@@ -108,6 +108,9 @@ and statement (stmt : Ast.stmt_t) (scope : scope_t) (acc : error_list_t) :
       statements body scope (List.concat [ arg_errors; acc ])
   | Ast.ClassStmt (name_token, methods) ->
       let rec resolve_methods methods scope acc =
+        (match scope.class_type with
+        | InsideClass -> Stdlib.prerr_endline "*inside_class"
+        | OutsideClass -> Stdlib.prerr_endline "*outside class");
         match methods with
         | [] -> acc
         | m :: rest ->
