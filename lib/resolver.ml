@@ -9,21 +9,24 @@ type var_t = Declared of string | Defined of string
 
 type vars_t = (string, var_t) Hashtbl.t
 type scope_type_t = Inherit | Function [@@deriving equal, compare]
+type class_type_t = OutsideClass | InsideClass
 
 type scope_t = {
   vars : vars_t;
   parent : scope_t option;
   scope_type : scope_type_t;
+  class_type : class_type_t;
 }
 
 let create_scope ?(parent : scope_t option = None)
-    ?(scope_type : scope_type_t = Inherit) () =
+    ?(scope_type : scope_type_t = Inherit)
+    ?(class_type : class_type_t = OutsideClass) () =
   let scope_type =
     match (scope_type, parent) with
     | Inherit, Some parent -> parent.scope_type
     | _, _ -> scope_type
   in
-  { vars = Hashtbl.create (module String); parent; scope_type }
+  { vars = Hashtbl.create (module String); parent; scope_type; class_type }
 
 let declare_var (scope : scope_t) (name : string) (token : Tokens.t) =
   if Option.is_some scope.parent then
@@ -115,7 +118,9 @@ and statement (stmt : Ast.stmt_t) (scope : scope_t) (acc : error_list_t) :
         match declare_var scope name_token.lexeme name_token with
         | Ok _ ->
             define_var scope name_token.lexeme;
-            let class_scope = create_scope ~parent:(Some scope) () in
+            let class_scope =
+              create_scope ~parent:(Some scope) ~class_type:InsideClass ()
+            in
             define_var class_scope "this";
             resolve_methods methods class_scope acc
         | Error error -> error :: acc
@@ -186,11 +191,15 @@ and expression (expr : Ast.t) (scope : scope_t) (acc : error_list_t) :
           acc
       | Error err -> err :: acc)
   | Ast.This (token, distance) -> (
-      match resolve_var scope token.lexeme token with
-      | Ok d ->
-          distance := d;
-          acc
-      | Error err -> err :: acc)
+      match scope.class_type with
+      | InsideClass -> (
+          match resolve_var scope token.lexeme token with
+          | Ok d ->
+              distance := d;
+              acc
+          | Error err -> err :: acc)
+      | OutsideClass ->
+          { token; message = "Can't use 'this' outside a class." } :: acc)
   | Ast.Unary (_, expr) -> expression expr scope acc
 
 let analyze_program (program : Ast.program_t) :
