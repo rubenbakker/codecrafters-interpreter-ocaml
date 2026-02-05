@@ -192,8 +192,8 @@ and expression (expr : Ast.t) (scope : scope_t) (acc : error_list_t) :
       | Error err -> err :: acc)
   | Ast.This (token, distance) -> (
       (match scope.class_type with
-      | InsideClass -> Stdlib.print_endline "inside_class"
-      | OutsideClass -> Stdlib.print_endline "outside class");
+      | InsideClass -> Stdlib.prerr_endline "inside_class"
+      | OutsideClass -> Stdlib.prerr_endline "outside class");
       match scope.class_type with
       | InsideClass -> (
           Stdlib.print_endline "this - inside class";
