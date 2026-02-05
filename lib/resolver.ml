@@ -193,6 +193,7 @@ and expression (expr : Ast.t) (scope : scope_t) (acc : error_list_t) :
   | Ast.This (token, distance) -> (
       match scope.class_type with
       | InsideClass -> (
+          Stdlib.print_endline "this - inside class";
           match resolve_var scope token.lexeme token with
           | Ok d ->
               distance := d;
