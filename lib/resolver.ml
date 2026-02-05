@@ -103,12 +103,19 @@ and statement (stmt : Ast.stmt_t) (scope : scope_t) (acc : error_list_t) :
         |> List.filter_opt |> List.rev
       in
       statements body scope (List.concat [ arg_errors; acc ])
-  | Ast.ClassStmt name_token ->
+  | Ast.ClassStmt (name_token, methods) ->
+      let rec resolve_methods methods scope acc =
+        match methods with
+        | [] -> acc
+        | m :: rest ->
+            let errors = statement m scope acc in
+            resolve_methods rest scope (List.concat [ errors; acc ])
+      in
       let acc =
         match declare_var scope name_token.lexeme name_token with
         | Ok _ ->
             define_var scope name_token.lexeme;
-            acc
+            resolve_methods methods scope acc
         | Error error -> error :: acc
       in
       acc
@@ -178,9 +185,6 @@ and expression (expr : Ast.t) (scope : scope_t) (acc : error_list_t) :
       | Error err -> err :: acc)
   | Ast.Unary (_, expr) -> expression expr scope acc
 
-(* let analyze_program_tl (program : Ast.program_t) : (t list, string) Result.t = *)
-(*   Ok (statements program (create_scope ()) []) *)
-(**)
 let analyze_program (program : Ast.program_t) :
     (Ast.program_t, error_list_t) Result.t =
   let errors = statements program (create_scope ()) [] in

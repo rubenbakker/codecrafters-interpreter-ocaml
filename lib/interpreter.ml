@@ -1,17 +1,25 @@
 open! Base
 
-type environment_vars = (string, value_t) Hashtbl.t
-and environment = { parent : environment option; vars : environment_vars }
-and class_t = { name_token : Tokens.t }
+type vars_t = (string, value_t) Hashtbl.t
+and environment = { parent : environment option; vars : vars_t }
+and class_t = { name_token : Tokens.t; methods : methods_t }
+and methods_t = (string, function_t) Hashtbl.t
+
+and function_t = {
+  name_token : Tokens.t;
+  args : Tokens.t list;
+  body : Ast.program_t;
+  closure : environment;
+}
 
 and value_t =
   | BooleanValue of bool
   | NumberValue of float
   | StringValue of string
   | NativeFunctionValue of string * int
-  | FunctionValue of Tokens.t * Tokens.t list * Ast.stmt_t list * environment
+  | FunctionValue of function_t
   | ClassValue of class_t
-  | ClassInstanceValue of class_t * environment_vars
+  | ClassInstanceValue of class_t * vars_t
   | NilValue
 
 type runtime_error = { token : Tokens.t; message : string }
@@ -90,7 +98,7 @@ let is_truthy value =
   | NumberValue _ -> true
   | StringValue _ -> true
   | NativeFunctionValue _ -> true
-  | FunctionValue (_, _, _, _) -> true
+  | FunctionValue _ -> true
   | ClassValue _ -> true
   | ClassInstanceValue _ -> true
   | NilValue -> false
@@ -116,7 +124,8 @@ let number_to_string value =
 let value_to_string value =
   match value with
   | NativeFunctionValue (name, _) -> Stdlib.Printf.sprintf "<fn %s>" name
-  | FunctionValue (name, _, _, _) -> Stdlib.Printf.sprintf "<fn %s>" name.lexeme
+  | FunctionValue { name_token; _ } ->
+      Stdlib.Printf.sprintf "<fn %s>" name_token.lexeme
   | ClassValue def -> def.name_token.lexeme
   | ClassInstanceValue (def, _) ->
       Stdlib.Printf.sprintf "%s instance" def.name_token.lexeme
@@ -136,7 +145,7 @@ and statement (stmt : Ast.stmt_t) (env : environment) : unit =
   match stmt with
   | Ast.Block stmts -> run_program stmts (create_environment env)
   | Ast.Function (name, args, body) -> define_function name args body env
-  | Ast.ClassStmt name_token -> define_class name_token env
+  | Ast.ClassStmt (name_token, methods) -> define_class name_token methods env
   | Ast.ReturnStmt (expr, _) -> return expr env
   | Ast.PrintStmt expr ->
       expression expr env |> value_to_string |> Stdlib.print_endline
@@ -163,12 +172,25 @@ and return expr env =
   let return_value = expression expr env in
   raise (Return_exn return_value)
 
-and define_class name_token env =
-  define_var ~name:name_token.lexeme ~value:(ClassValue { name_token }) env
+and define_class name_token method_functions env =
+  let methods = Hashtbl.create (module String) in
+  List.map method_functions ~f:(fun m ->
+      match m with
+      | Ast.Function (name, args, body) ->
+          Hashtbl.set methods ~key:name.lexeme
+            ~data:{ name_token = name; args; body; closure = env }
+      | _ ->
+          raise
+            (Runtime_exn
+               { token = name_token; message = "Unknown method definition." }))
+  |> ignore;
+  define_var ~name:name_token.lexeme
+    ~value:(ClassValue { name_token; methods })
+    env
 
 and define_function name args body env =
   define_var ~name:name.lexeme
-    ~value:(FunctionValue (name, args, body, env))
+    ~value:(FunctionValue { name_token = name; args; body; closure = env })
     env
 
 and expression (ast : Ast.t) (env : environment) : value_t =
@@ -224,20 +246,26 @@ and binary left_expr token right_expr env =
   | _, _, _ ->
       raise (Runtime_exn { token; message = "Operands must be numbers" })
 
+and find_method (clazz : class_t) (name_token : Tokens.t) : function_t option =
+  Hashtbl.find clazz.methods name_token.lexeme
+
 and get_instance_property instance name_token env : value_t =
   match expression instance env with
-  | ClassInstanceValue (_clazz, ivars) -> (
+  | ClassInstanceValue (clazz, ivars) -> (
       match Hashtbl.find ivars name_token.lexeme with
       | Some value -> value
-      | None ->
-          raise
-            (Runtime_exn
-               {
-                 token = name_token;
-                 message =
-                   Stdlib.Printf.sprintf "Undefined property '%s'."
-                     name_token.lexeme;
-               }))
+      | None -> (
+          match find_method clazz name_token with
+          | Some m -> FunctionValue m
+          | None ->
+              raise
+                (Runtime_exn
+                   {
+                     token = name_token;
+                     message =
+                       Stdlib.Printf.sprintf "Undefined property '%s'."
+                         name_token.lexeme;
+                   })))
   | _ ->
       raise
         (Runtime_exn
@@ -274,8 +302,7 @@ and call callee args token env : value_t =
              token;
              message = Stdlib.Printf.sprintf "Unimplemented function %s" name;
            })
-  | FunctionValue (_fun_name, fun_args, fun_body, closure) ->
-      call_function fun_args fun_body args token closure env
+  | FunctionValue m -> call_function m.args m.body args token m.closure env
   | ClassValue clazz -> create_class_instance clazz
   | _ ->
       raise

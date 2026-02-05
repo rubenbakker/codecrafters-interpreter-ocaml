@@ -66,15 +66,31 @@ and class_stmt (name_token : Tokens.t) (tokens : Tokens.t list) :
   | { token_type = Tokens.LEFT_BRACE; _ }
     :: { token_type = Tokens.RIGHT_BRACE; _ }
     :: rest ->
-      (rest, ClassStmt name_token)
-  | { token_type = Tokens.LEFT_BRACE; _ } :: _ ->
-      raise
-        (Parse_exn
-           { token = name_token; message = "Expect '}' at end of class" })
+      (rest, ClassStmt (name_token, []))
+  | { token_type = Tokens.LEFT_BRACE; _ } :: rest ->
+      let rest, methods = class_body rest [] in
+      (rest, ClassStmt (name_token, methods))
   | _ ->
       raise
         (Parse_exn
            { token = name_token; message = "Expect '{' after class name" })
+
+and class_body (tokens : Tokens.t list) (acc : Ast.stmt_t list) :
+    Tokens.t list * Ast.stmt_t list =
+  match tokens with
+  | { token_type = Tokens.RIGHT_BRACE; _ } :: rest -> (rest, List.rev acc)
+  | ({ token_type = Tokens.EOF; _ } as token) :: _ ->
+      raise (Parse_exn { token; message = "Expect '}' after class." })
+  | ({ token_type = Tokens.IDENTIFIER; _ } as name_token) :: rest ->
+      let rest, func = function_stmt name_token rest in
+      class_body rest (func :: acc)
+  | _ ->
+      raise
+        (Parse_exn
+           {
+             token = List.hd_exn tokens;
+             message = "Unexpected token in class.";
+           })
 
 and function_stmt (name_token : Tokens.t) (tokens : Tokens.t list) :
     Tokens.t list * Ast.stmt_t =
@@ -83,7 +99,7 @@ and function_stmt (name_token : Tokens.t) (tokens : Tokens.t list) :
       let rest, args = function_args rest [] in
       let rest =
         consume_token rest ~tt:Tokens.LEFT_BRACE
-          ~error:"Expect '{' after function argument lits"
+          ~error:"Expect '{' after function argument list"
       in
       let rest, body = block rest [] in
       match body with
