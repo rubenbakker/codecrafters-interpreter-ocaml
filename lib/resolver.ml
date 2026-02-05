@@ -9,7 +9,7 @@ type var_t = Declared of string | Defined of string
 
 type vars_t = (string, var_t) Hashtbl.t
 type scope_type_t = Inherit | Function [@@deriving equal, compare]
-type class_type_t = OutsideClass | InsideClass
+type class_type_t = InheritClassType | InsideClass
 
 type scope_t = {
   vars : vars_t;
@@ -20,11 +20,16 @@ type scope_t = {
 
 let create_scope ?(parent : scope_t option = None)
     ?(scope_type : scope_type_t = Inherit)
-    ?(class_type : class_type_t = OutsideClass) () =
+    ?(class_type : class_type_t = InheritClassType) () =
   let scope_type =
     match (scope_type, parent) with
     | Inherit, Some parent -> parent.scope_type
     | _, _ -> scope_type
+  in
+  let class_type =
+    match (class_type, parent) with
+    | InheritClassType, Some parent -> parent.class_type
+    | _, _ -> class_type
   in
   { vars = Hashtbl.create (module String); parent; scope_type; class_type }
 
@@ -110,7 +115,7 @@ and statement (stmt : Ast.stmt_t) (scope : scope_t) (acc : error_list_t) :
       let rec resolve_methods methods scope acc =
         (match scope.class_type with
         | InsideClass -> Stdlib.prerr_endline "*inside_class"
-        | OutsideClass -> Stdlib.prerr_endline "*outside class");
+        | InheritClassType -> Stdlib.prerr_endline "*outside class");
         match methods with
         | [] -> acc
         | m :: rest ->
@@ -198,7 +203,7 @@ and expression (expr : Ast.t) (scope : scope_t) (acc : error_list_t) :
   | Ast.This (token, distance) -> (
       (match scope.class_type with
       | InsideClass -> Stdlib.prerr_endline "inside_class"
-      | OutsideClass -> Stdlib.prerr_endline "outside class");
+      | InheritClassType -> Stdlib.prerr_endline "outside class");
       match scope.class_type with
       | InsideClass -> (
           Stdlib.print_endline "this - inside class";
@@ -207,7 +212,7 @@ and expression (expr : Ast.t) (scope : scope_t) (acc : error_list_t) :
               distance := d;
               acc
           | Error err -> err :: acc)
-      | OutsideClass ->
+      | InheritClassType ->
           { token; message = "Can't use 'this' outside a class." } :: acc)
   | Ast.Unary (_, expr) -> expression expr scope acc
 
