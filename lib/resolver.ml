@@ -125,7 +125,9 @@ and statement (stmt : Ast.stmt_t) (scope : scope_t) (acc : error_list_t) :
               create_scope ~parent:(Some scope) ~class_type:InsideClass ()
             in
             define_var class_scope "this";
-            resolve_methods methods class_scope acc
+            let x = resolve_methods methods class_scope acc in
+            Stdlib.prerr_endline "after methods";
+            x
         | Error error -> error :: acc
       in
       acc
