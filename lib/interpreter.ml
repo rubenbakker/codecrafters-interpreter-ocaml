@@ -11,6 +11,7 @@ and function_t = {
   args : Tokens.t list;
   body : Ast.program_t;
   closure : environment;
+  is_init : bool;
 }
 
 and value_t =
@@ -179,7 +180,14 @@ and define_class name_token method_functions env =
       match m with
       | Ast.Function (name, args, body) ->
           Hashtbl.set methods ~key:name.lexeme
-            ~data:{ name_token = name; args; body; closure = env }
+            ~data:
+              {
+                name_token = name;
+                args;
+                body;
+                closure = env;
+                is_init = String.(name.lexeme = "init");
+              }
       | _ ->
           raise
             (Runtime_exn
@@ -191,7 +199,9 @@ and define_class name_token method_functions env =
 
 and define_function name args body env =
   define_var ~name:name.lexeme
-    ~value:(FunctionValue { name_token = name; args; body; closure = env })
+    ~value:
+      (FunctionValue
+         { name_token = name; args; body; closure = env; is_init = false })
     env
 
 and expression (ast : Ast.t) (env : environment) : value_t =
@@ -308,7 +318,7 @@ and call callee args token env : value_t =
              token;
              message = Stdlib.Printf.sprintf "Unimplemented function %s" name;
            })
-  | FunctionValue m -> call_function m.args m.body args token m.closure env
+  | FunctionValue m -> call_function m args token m.closure env
   | ClassValue clazz -> create_class_instance clazz args token env
   | _ ->
       raise
@@ -324,14 +334,12 @@ and create_class_instance clazz args token env : value_t =
       let closure = create_environment env in
       define_var ~name:"this" ~value:instance closure;
       let fv = { f with closure } in
-      call_function fv.args fv.body args token closure env
-        ~return_value:instance
+      call_function fv args token closure env
 
-and call_function ?(return_value : value_t = NilValue) fun_args fun_body args
-    token closure env =
+and call_function func args token closure env =
   let func_enc = create_environment closure in
   let open List.Or_unequal_lengths in
-  match List.zip fun_args args with
+  match List.zip func.args args with
   | Ok arg_pairs -> (
       List.map
         ~f:(fun (name_token, expr) ->
@@ -340,8 +348,8 @@ and call_function ?(return_value : value_t = NilValue) fun_args fun_body args
         arg_pairs
       |> ignore;
       try
-        run_program fun_body func_enc;
-        return_value
+        run_program func.body func_enc;
+        if func.is_init then Hashtbl.find_exn closure.vars "this" else NilValue
       with Return_exn value -> value)
   | Unequal_lengths ->
       raise
@@ -350,7 +358,7 @@ and call_function ?(return_value : value_t = NilValue) fun_args fun_body args
              token;
              message =
                Stdlib.Printf.sprintf "Expected %d arguments but got %d"
-                 (List.length fun_args) (List.length args);
+                 (List.length func.args) (List.length args);
            })
 
 and unary token expr env : value_t =
