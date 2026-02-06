@@ -309,15 +309,26 @@ and call callee args token env : value_t =
              message = Stdlib.Printf.sprintf "Unimplemented function %s" name;
            })
   | FunctionValue m -> call_function m.args m.body args token m.closure env
-  | ClassValue clazz -> create_class_instance clazz
+  | ClassValue clazz -> create_class_instance clazz args token env
   | _ ->
       raise
         (Runtime_exn { token; message = "Can only call functions and classes." })
 
-and create_class_instance (clazz : class_t) : value_t =
-  InstanceValue { clazz; ivars = Hashtbl.create (module String) }
+and create_class_instance clazz args token env : value_t =
+  let instance =
+    InstanceValue { clazz; ivars = Hashtbl.create (module String) }
+  in
+  match Hashtbl.find clazz.methods "init" with
+  | None -> instance
+  | Some f ->
+      let closure = create_environment env in
+      define_var ~name:"this" ~value:instance closure;
+      let fv = { f with closure } in
+      call_function fv.args fv.body args token closure env
+        ~return_value:instance
 
-and call_function fun_args fun_body args token closure env =
+and call_function ?(return_value : value_t = NilValue) fun_args fun_body args
+    token closure env =
   let func_enc = create_environment closure in
   let open List.Or_unequal_lengths in
   match List.zip fun_args args with
@@ -330,7 +341,7 @@ and call_function fun_args fun_body args token closure env =
       |> ignore;
       try
         run_program fun_body func_enc;
-        NilValue
+        return_value
       with Return_exn value -> value)
   | Unequal_lengths ->
       raise
