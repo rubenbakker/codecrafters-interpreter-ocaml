@@ -8,7 +8,10 @@ type var_t = Declared of string | Defined of string
 [@@deriving compare, equal, sexp]
 
 type vars_t = (string, var_t) Hashtbl.t
-type scope_type_t = Inherit | Function [@@deriving equal, compare]
+
+type scope_type_t = Inherit | Function | Initializer
+[@@deriving equal, compare]
+
 type class_type_t = InheritClassType | InsideClass
 
 type scope_t = {
@@ -145,6 +148,7 @@ and statement (stmt : Ast.stmt_t) (scope : scope_t) (acc : error_list_t) :
       let acc =
         match scope.scope_type with
         | Function -> acc
+        | Initializer -> acc
         | Inherit ->
             {
               token;
