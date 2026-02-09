@@ -146,8 +146,7 @@ let rec program_to_string (program : program_t) : string =
       | PrintStmt expr -> Stdlib.Printf.sprintf "(PRINT %s)\n" (to_string expr)
       | ReturnStmt (expr, _) ->
           Stdlib.Printf.sprintf "(RETURN %s)\n"
-            (if Option.is_some expr then to_string (Option.value_exn expr)
-             else "NONE")
+            (match expr with None -> "NONE" | Some expr -> to_string expr)
       | ExprStmt expr -> Stdlib.Printf.sprintf "(%s)\n" (to_string expr))
     program
   |> String.concat_lines
