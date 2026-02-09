@@ -147,7 +147,8 @@ and statement (stmt : Ast.stmt_t) (env : environment) : unit =
   match stmt with
   | Ast.Block stmts -> run_program stmts (create_environment env)
   | Ast.Function (name, args, body) -> define_function name args body env
-  | Ast.ClassStmt (name_token, methods) -> define_class name_token methods env
+  | Ast.ClassStmt (name_token, _, methods) ->
+      define_class name_token methods env
   | Ast.ReturnStmt (expr, _) -> return expr env
   | Ast.PrintStmt expr ->
       expression expr env |> value_to_string |> Stdlib.print_endline

@@ -123,7 +123,7 @@ and statement (stmt : Ast.stmt_t) (scope : scope_t) (acc : error_list_t) :
         |> List.filter_opt |> List.rev
       in
       statements body scope (List.concat [ arg_errors; acc ])
-  | Ast.ClassStmt (name_token, methods) ->
+  | Ast.ClassStmt (name_token, _, methods) ->
       let rec resolve_methods methods scope acc =
         match methods with
         | [] -> acc
