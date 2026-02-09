@@ -148,7 +148,11 @@ and statement (stmt : Ast.stmt_t) (scope : scope_t) (acc : error_list_t) :
       let acc =
         match scope.scope_type with
         | Function -> acc
-        | Initializer -> acc
+        | Initializer ->
+            if Option.is_none expr then acc
+            else
+              { token; message = "Can't return a value from an initializer." }
+              :: acc
         | Inherit ->
             {
               token;
@@ -156,7 +160,7 @@ and statement (stmt : Ast.stmt_t) (scope : scope_t) (acc : error_list_t) :
             }
             :: acc
       in
-      expression expr scope acc
+      expression (Option.value_exn expr) scope acc
   | Ast.VarStmt (name, expr, token) ->
       let acc =
         match declare_var scope name token with

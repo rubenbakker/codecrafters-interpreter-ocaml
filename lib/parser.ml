@@ -163,14 +163,14 @@ and statement (tokens : Tokens.t list) : Tokens.t list * Ast.stmt_t =
   | ({ token_type = Tokens.RETURN; _ } as token)
     :: { token_type = Tokens.SEMICOLON; _ }
     :: rest ->
-      (rest, Ast.ReturnStmt (Ast.Literal Ast.LiteralNil, token))
+      (rest, Ast.ReturnStmt (None, token))
   | ({ token_type = Tokens.RETURN; _ } as token) :: rest ->
       let rest, expr = expression rest in
       let rest =
         consume_token rest ~tt:Tokens.SEMICOLON
           ~error:"Expect ';' after expression."
       in
-      (rest, Ast.ReturnStmt (expr, token))
+      (rest, Ast.ReturnStmt (Some expr, token))
   | rest ->
       let rest, expr = expression rest in
       let rest =

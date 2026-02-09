@@ -28,7 +28,7 @@ type runtime_error = { token : Tokens.t; message : string }
 
 exception Runtime_exn of runtime_error
 exception Notimplemented
-exception Return_exn of value_t
+exception Return_exn of value_t option
 
 let create_root_environment () : environment =
   { parent = None; vars = Hashtbl.create (module String) }
@@ -171,7 +171,7 @@ and perform_while cond body env =
   | false -> ()
 
 and return expr env =
-  let return_value = expression expr env in
+  let return_value = Option.map expr ~f:(fun expr -> expression expr env) in
   raise (Return_exn return_value)
 
 and define_class name_token method_functions env =
@@ -350,7 +350,9 @@ and call_function func args token closure env =
       try
         run_program func.body func_enc;
         if func.is_init then Hashtbl.find_exn closure.vars "this" else NilValue
-      with Return_exn value -> value)
+      with Return_exn value ->
+        if func.is_init then Hashtbl.find_exn closure.vars "this"
+        else Option.value_exn value)
   | Unequal_lengths ->
       raise
         (Runtime_exn
