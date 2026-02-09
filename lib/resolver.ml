@@ -144,7 +144,7 @@ and statement (stmt : Ast.stmt_t) (scope : scope_t) (acc : error_list_t) :
   | Ast.WhileStmt (cond, body) ->
       expression cond scope acc |> statement body scope
   | Ast.PrintStmt stmt -> expression stmt scope acc
-  | Ast.ReturnStmt (expr, token) ->
+  | Ast.ReturnStmt (expr, token) -> (
       let acc =
         match scope.scope_type with
         | Function -> acc
@@ -160,7 +160,7 @@ and statement (stmt : Ast.stmt_t) (scope : scope_t) (acc : error_list_t) :
             }
             :: acc
       in
-      expression (Option.value_exn expr) scope acc
+      match expr with None -> acc | Some expr -> expression expr scope acc)
   | Ast.VarStmt (name, expr, token) ->
       let acc =
         match declare_var scope name token with
