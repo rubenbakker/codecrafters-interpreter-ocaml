@@ -12,7 +12,7 @@ type vars_t = (string, var_t) Hashtbl.t
 type scope_type_t = Inherit | Function | Initializer
 [@@deriving equal, compare]
 
-type class_type_t = InheritClassType | InsideClass
+type class_type_t = InheritClassType | InsideClass [@@deriving equal, compare]
 
 type scope_t = {
   vars : vars_t;
@@ -103,7 +103,16 @@ and statement (stmt : Ast.stmt_t) (scope : scope_t) (acc : error_list_t) :
         | Error error -> error :: acc
       in
       define_var scope fun_name.lexeme;
-      let scope = create_scope ~scope_type:Function ~parent:(Some scope) () in
+      let function_type =
+        if
+          equal_class_type_t scope.class_type InsideClass
+          && String.(fun_name.lexeme = "init")
+        then Initializer
+        else Function
+      in
+      let scope =
+        create_scope ~scope_type:function_type ~parent:(Some scope) ()
+      in
       let arg_errors =
         List.map args ~f:(fun arg_token ->
             match declare_var scope arg_token.lexeme arg_token with
