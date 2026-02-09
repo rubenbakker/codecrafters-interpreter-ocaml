@@ -350,9 +350,9 @@ and call_function func args token closure env =
       try
         run_program func.body func_enc;
         if func.is_init then Hashtbl.find_exn closure.vars "this" else NilValue
-      with Return_exn value ->
+      with Return_exn value -> (
         if func.is_init then Hashtbl.find_exn closure.vars "this"
-        else Option.value_exn value)
+        else match value with None -> NilValue | Some value -> value))
   | Unequal_lengths ->
       raise
         (Runtime_exn
