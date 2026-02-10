@@ -2,7 +2,13 @@ open! Base
 
 type vars_t = (string, value_t) Hashtbl.t
 and environment = { parent : environment option; vars : vars_t }
-and class_t = { name_token : Tokens.t; methods : methods_t }
+
+and class_t = {
+  name_token : Tokens.t;
+  methods : methods_t;
+  superclass : class_t option;
+}
+
 and methods_t = (string, function_t) Hashtbl.t
 and instance_t = { clazz : class_t; ivars : vars_t }
 
@@ -39,8 +45,7 @@ let create_environment (parent : environment) : environment =
 let define_var ~(name : string) ~(value : value_t) (env : environment) =
   Hashtbl.set env.vars ~key:name ~data:value
 
-let rec get_var_ ~(token : Tokens.t) ~(expr : Ast.t) (env : environment option)
-    : value_t =
+let rec get_var_ ~(token : Tokens.t) (env : environment option) : value_t =
   let name = token.lexeme in
   match env with
   | None ->
@@ -52,7 +57,7 @@ let rec get_var_ ~(token : Tokens.t) ~(expr : Ast.t) (env : environment option)
            })
   | Some env -> (
       match Hashtbl.find env.vars token.lexeme with
-      | None -> get_var_ ~token ~expr:(expr : Ast.t) env.parent
+      | None -> get_var_ ~token env.parent
       | Some v -> v)
 
 let rec find_env (env : environment) (distance : int option) : environment =
@@ -63,10 +68,10 @@ let rec find_env (env : environment) (distance : int option) : environment =
   | Some distance, Some parent -> find_env parent (Some (distance - 1))
   | Some _, None -> env
 
-let get_var ~(token : Tokens.t) ~(expr : Ast.t) ~(distance : int option)
-    (env : environment) : value_t =
+let get_var ~(token : Tokens.t) ~(distance : int option) (env : environment) :
+    value_t =
   let env = find_env env distance in
-  get_var_ ~token ~expr (Some env)
+  get_var_ ~token (Some env)
 
 let rec assign_var_ ~(token : Tokens.t) ~(value : value_t)
     (env : environment option) =
@@ -147,8 +152,20 @@ and statement (stmt : Ast.stmt_t) (env : environment) : unit =
   match stmt with
   | Ast.Block stmts -> run_program stmts (create_environment env)
   | Ast.Function (name, args, body) -> define_function name args body env
-  | Ast.ClassStmt (name_token, _, methods) ->
-      define_class name_token methods env
+  | Ast.ClassStmt (name_token, superclass_name, methods) ->
+      let superclass =
+        Option.map superclass_name ~f:(fun superclass_name ->
+            match get_var ~token:superclass_name ~distance:None env with
+            | ClassValue clazz -> clazz
+            | _ ->
+                raise
+                  (Runtime_exn
+                     {
+                       token = superclass_name;
+                       message = "Superclass must be a class.";
+                     }))
+      in
+      define_class name_token superclass methods env
   | Ast.ReturnStmt (expr, _) -> return expr env
   | Ast.PrintStmt expr ->
       expression expr env |> value_to_string |> Stdlib.print_endline
@@ -175,7 +192,7 @@ and return expr env =
   let return_value = Option.map expr ~f:(fun expr -> expression expr env) in
   raise (Return_exn return_value)
 
-and define_class name_token method_functions env =
+and define_class name_token superclass method_functions env =
   let methods = Hashtbl.create (module String) in
   List.map method_functions ~f:(fun m ->
       match m with
@@ -195,7 +212,7 @@ and define_class name_token method_functions env =
                { token = name_token; message = "Unknown method definition." }))
   |> ignore;
   define_var ~name:name_token.lexeme
-    ~value:(ClassValue { name_token; methods })
+    ~value:(ClassValue { name_token; methods; superclass })
     env
 
 and define_function name args body env =
@@ -221,10 +238,10 @@ and expression (ast : Ast.t) (env : environment) : value_t =
       binary left_expr token_type right_expr env
   | Ast.Logical (left_expr, token_type, right_expr) ->
       logical left_expr token_type right_expr env
-  | Ast.Variable (_name, token, distance) as expr ->
-      get_var ~token ~expr ~distance:!distance env
-  | Ast.This (name_token, distance) as expr ->
-      get_var ~token:name_token ~expr ~distance:!distance env
+  | Ast.Variable (_name, token, distance) ->
+      get_var ~token ~distance:!distance env
+  | Ast.This (name_token, distance) ->
+      get_var ~token:name_token ~distance:!distance env
 
 and logical left_expr token right_expr env =
   let left = expression left_expr env in
