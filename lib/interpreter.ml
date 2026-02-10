@@ -197,9 +197,10 @@ and define_class name_token superclass method_functions env =
   let closure =
     match superclass with
     | Some superclass ->
-        let env = create_environment env in
-        define_var ~name:"super" ~value:(ClassValue superclass) env;
-        env
+        let closure = create_environment env in
+        define_var ~name:"super" ~value:(ClassValue superclass) closure;
+        Stdlib.prerr_endline "created super!";
+        closure
     | None -> env
   in
   List.map method_functions ~f:(fun m ->
