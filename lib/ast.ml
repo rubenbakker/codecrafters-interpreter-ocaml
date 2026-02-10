@@ -21,10 +21,13 @@ type t =
   | Unary of Tokens.t * t
 [@@deriving compare, equal, sexp]
 
+type superclass_t = { token : Tokens.t; distance : int option ref }
+[@@deriving compare, equal, sexp]
+
 type stmt_t =
   | Block of stmt_t list
   | Function of Tokens.t * Tokens.t list * stmt_t list
-  | ClassStmt of Tokens.t * Tokens.t option * stmt_t list
+  | ClassStmt of Tokens.t * superclass_t option * stmt_t list
   | IfStmt of t * stmt_t * stmt_t option
   | WhileStmt of t * stmt_t
   | PrintStmt of t
@@ -146,8 +149,8 @@ let rec program_to_string (program : program_t) : string =
           Stdlib.Printf.sprintf "(CLASS %s%s)" name.lexeme
             (match superclass_name with
             | None -> ""
-            | Some superclass_name ->
-                Stdlib.Printf.sprintf " < %s" superclass_name.lexeme)
+            | Some superclass ->
+                Stdlib.Printf.sprintf " < %s" superclass.token.lexeme)
       | PrintStmt expr -> Stdlib.Printf.sprintf "(PRINT %s)\n" (to_string expr)
       | ReturnStmt (expr, _) ->
           Stdlib.Printf.sprintf "(RETURN %s)\n"

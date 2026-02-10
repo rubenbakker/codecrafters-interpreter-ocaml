@@ -123,7 +123,7 @@ and statement (stmt : Ast.stmt_t) (scope : scope_t) (acc : error_list_t) :
         |> List.filter_opt |> List.rev
       in
       statements body scope (List.concat [ arg_errors; acc ])
-  | Ast.ClassStmt (name_token, _superclass_token, methods) ->
+  | Ast.ClassStmt (name_token, superclass, methods) ->
       let rec resolve_methods methods scope acc =
         match methods with
         | [] -> acc
@@ -134,13 +134,24 @@ and statement (stmt : Ast.stmt_t) (scope : scope_t) (acc : error_list_t) :
       let acc =
         match declare_var scope name_token.lexeme name_token with
         | Ok _ ->
+            let acc =
+              match superclass with
+              | Some superclass -> (
+                  match
+                    resolve_var scope superclass.token.lexeme superclass.token
+                  with
+                  | Ok distance ->
+                      superclass.distance := distance;
+                      acc
+                  | Error err -> err :: acc)
+              | None -> acc
+            in
             define_var scope name_token.lexeme;
             let class_scope =
               create_scope ~parent:(Some scope) ~class_type:InsideClass ()
             in
             define_var class_scope "this";
-            let x = resolve_methods methods class_scope acc in
-            x
+            resolve_methods methods class_scope acc
         | Error error -> error :: acc
       in
       acc

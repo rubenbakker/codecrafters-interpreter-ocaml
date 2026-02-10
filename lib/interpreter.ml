@@ -152,16 +152,16 @@ and statement (stmt : Ast.stmt_t) (env : environment) : unit =
   match stmt with
   | Ast.Block stmts -> run_program stmts (create_environment env)
   | Ast.Function (name, args, body) -> define_function name args body env
-  | Ast.ClassStmt (name_token, superclass_name, methods) ->
+  | Ast.ClassStmt (name_token, superclass, methods) ->
       let superclass =
-        Option.map superclass_name ~f:(fun superclass_name ->
-            match get_var ~token:superclass_name ~distance:None env with
+        Option.map superclass ~f:(fun { token; distance } ->
+            match get_var ~token ~distance:!distance env with
             | ClassValue clazz -> clazz
             | _ ->
                 raise
                   (Runtime_exn
                      {
-                       token = superclass_name;
+                       token = name_token;
                        message = "Superclass must be a class.";
                      }))
       in
