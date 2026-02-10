@@ -301,7 +301,7 @@ and get_instance_property instance name_token env : value_t =
       | None -> (
           match find_method instance.clazz name_token.lexeme with
           | Some m ->
-              let closure = create_environment env in
+              let closure = create_environment m.closure in
               define_var ~name:"this" ~value:instance_value closure;
               FunctionValue { m with closure }
           | None ->
