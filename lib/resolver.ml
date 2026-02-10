@@ -106,7 +106,8 @@ and statement (stmt : Ast.stmt_t) (scope : scope_t) (acc : error_list_t) :
       define_var scope fun_name.lexeme;
       let function_type =
         if
-          equal_class_type_t scope.class_type InsideClass
+          (equal_class_type_t scope.class_type InsideClass
+          || equal_class_type_t scope.class_type InsideSubClass)
           && String.(fun_name.lexeme = "init")
         then Initializer
         else Function
@@ -156,7 +157,7 @@ and statement (stmt : Ast.stmt_t) (scope : scope_t) (acc : error_list_t) :
                         superclass.distance := distance;
                         let scope =
                           create_scope ~parent:(Some scope)
-                            ~class_type:InsideClass ()
+                            ~class_type:InsideSubClass ()
                         in
                         define_var scope "super";
                         (scope, acc)
@@ -165,7 +166,12 @@ and statement (stmt : Ast.stmt_t) (scope : scope_t) (acc : error_list_t) :
             in
             define_var scope name_token.lexeme;
             let class_scope =
-              create_scope ~parent:(Some super_scope) ~class_type:InsideClass ()
+              create_scope ~parent:(Some super_scope)
+                ~class_type:
+                  (match superclass with
+                  | Some _ -> InsideSubClass
+                  | None -> InsideClass)
+                ()
             in
             define_var class_scope "this";
             resolve_methods methods class_scope acc
