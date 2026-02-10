@@ -194,6 +194,14 @@ and return expr env =
 
 and define_class name_token superclass method_functions env =
   let methods = Hashtbl.create (module String) in
+  let env =
+    match superclass with
+    | Some superclass ->
+        let env = create_environment env in
+        define_var ~name:"super" ~value:(ClassValue superclass) env;
+        env
+    | None -> env
+  in
   List.map method_functions ~f:(fun m ->
       match m with
       | Ast.Function (name, args, body) ->
@@ -242,6 +250,7 @@ and expression (ast : Ast.t) (env : environment) : value_t =
       get_var ~token ~distance:!distance env
   | Ast.This (name_token, distance) ->
       get_var ~token:name_token ~distance:!distance env
+  | Ast.Super (token, _, distance) -> get_var ~token ~distance:!distance env
 
 and logical left_expr token right_expr env =
   let left = expression left_expr env in

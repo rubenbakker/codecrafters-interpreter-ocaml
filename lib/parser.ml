@@ -427,6 +427,15 @@ and primary (tokens : Tokens.t list) : Tokens.t list * Ast.t =
       (rest, Ast.Literal (Ast.LiteralNumber value))
   | { token_type = Tokens.STRING value; _ } :: rest ->
       (rest, Ast.Literal (Ast.LiteralString value))
+  | ({ token_type = Tokens.SUPER; _ } as super_token)
+    :: { token_type = Tokens.DOT; _ }
+    :: ({ token_type = Tokens.IDENTIFIER; _ } as identifier_token)
+    :: rest ->
+      (rest, Ast.Super (super_token, identifier_token, ref None))
+  | ({ token_type = Tokens.SUPER; _ } as super_token) :: _ ->
+      raise
+        (Parse_exn
+           { token = super_token; message = "Expect superclass method name." })
   | ({ token_type = Tokens.THIS; _ } as this_token) :: rest ->
       (rest, Ast.This (this_token, ref None))
   | ({ token_type = Tokens.IDENTIFIER; lexeme = name; _ } as token) :: rest ->

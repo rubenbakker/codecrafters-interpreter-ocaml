@@ -134,27 +134,33 @@ and statement (stmt : Ast.stmt_t) (scope : scope_t) (acc : error_list_t) :
       let acc =
         match declare_var scope name_token.lexeme name_token with
         | Ok _ ->
-            let acc =
+            let scope, acc =
               match superclass with
               | Some superclass -> (
                   if String.(name_token.lexeme = superclass.token.lexeme) then
-                    {
-                      token = name_token;
-                      message =
-                        Stdlib.Printf.sprintf
-                          "Error at '%s'. A class can't inherit from itself."
-                          name_token.lexeme;
-                    }
-                    :: acc
+                    ( scope,
+                      {
+                        token = name_token;
+                        message =
+                          Stdlib.Printf.sprintf
+                            "Error at '%s'. A class can't inherit from itself."
+                            name_token.lexeme;
+                      }
+                      :: acc )
                   else
                     match
                       resolve_var scope superclass.token.lexeme superclass.token
                     with
                     | Ok distance ->
                         superclass.distance := distance;
-                        acc
-                    | Error err -> err :: acc)
-              | None -> acc
+                        let scope =
+                          create_scope ~parent:(Some scope)
+                            ~class_type:InsideClass ()
+                        in
+                        define_var scope "super";
+                        (scope, acc)
+                    | Error err -> (scope, err :: acc))
+              | None -> (scope, acc)
             in
             define_var scope name_token.lexeme;
             let class_scope =
@@ -244,6 +250,16 @@ and expression (expr : Ast.t) (scope : scope_t) (acc : error_list_t) :
           | Error err -> err :: acc)
       | InheritClassType ->
           { token; message = "Can't use 'this' outside a class." } :: acc)
+  | Ast.Super (token, _, distance) -> (
+      match scope.class_type with
+      | InsideClass -> (
+          match resolve_var scope token.lexeme token with
+          | Ok d ->
+              distance := d;
+              acc
+          | Error err -> err :: acc)
+      | InheritClassType ->
+          { token; message = "Can't use 'super' outside a class." } :: acc)
   | Ast.Unary (_, expr) -> expression expr scope acc
 
 let analyze_program (program : Ast.program_t) :

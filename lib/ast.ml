@@ -18,6 +18,7 @@ type t =
   | Literal of literal_t
   | Variable of string * Tokens.t * int option ref
   | This of Tokens.t * int option ref
+  | Super of Tokens.t * Tokens.t * int option ref
   | Unary of Tokens.t * t
 [@@deriving compare, equal, sexp]
 
@@ -107,6 +108,7 @@ let rec to_string (ast : t) : string =
   | Literal value -> literal_to_string value
   | Variable (name, _, _) -> Stdlib.Printf.sprintf "(VAR %s)" name
   | This _ -> "this"
+  | Super (_, _, _) -> "super"
   | Logical (left_expr, operator, right_expr) ->
       Stdlib.Printf.sprintf "(LOGIC %s %s %s)" (to_string left_expr)
         (token_type_to_string operator.token_type)
