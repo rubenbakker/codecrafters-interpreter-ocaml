@@ -278,7 +278,10 @@ and binary left_expr token right_expr env =
       raise (Runtime_exn { token; message = "Operands must be numbers" })
 
 and find_method (clazz : class_t) (name_token : Tokens.t) : function_t option =
-  Hashtbl.find clazz.methods name_token.lexeme
+  match (Hashtbl.find clazz.methods name_token.lexeme, clazz.superclass) with
+  | None, None -> None
+  | Some m, _ -> Some m
+  | None, Some clazz -> find_method clazz name_token
 
 and get_instance_property instance name_token env : value_t =
   match expression instance env with
