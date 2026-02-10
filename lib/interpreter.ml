@@ -194,7 +194,7 @@ and return expr env =
 
 and define_class name_token superclass method_functions env =
   let methods = Hashtbl.create (module String) in
-  let env =
+  let closure =
     match superclass with
     | Some superclass ->
         let env = create_environment env in
@@ -211,7 +211,7 @@ and define_class name_token superclass method_functions env =
                 name_token = name;
                 args;
                 body;
-                closure = env;
+                closure;
                 is_init = String.(name.lexeme = "init");
               }
       | _ ->
