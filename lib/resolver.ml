@@ -136,14 +136,24 @@ and statement (stmt : Ast.stmt_t) (scope : scope_t) (acc : error_list_t) :
         | Ok _ ->
             let acc =
               match superclass with
-              | Some superclass -> (
-                  match
-                    resolve_var scope superclass.token.lexeme superclass.token
-                  with
-                  | Ok distance ->
-                      superclass.distance := distance;
-                      acc
-                  | Error err -> err :: acc)
+              | Some superclass ->
+                  if String.(name_token.lexeme = superclass.token.lexeme) then
+                    match
+                      resolve_var scope superclass.token.lexeme superclass.token
+                    with
+                    | Ok distance ->
+                        superclass.distance := distance;
+                        acc
+                    | Error err -> err :: acc
+                  else
+                    {
+                      token = name_token;
+                      message =
+                        Stdlib.Printf.sprintf
+                          "Error at '%s'. A class can't inherit from itself."
+                          name_token.lexeme;
+                    }
+                    :: acc
               | None -> acc
             in
             define_var scope name_token.lexeme;
