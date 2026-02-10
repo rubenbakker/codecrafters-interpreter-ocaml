@@ -12,7 +12,8 @@ type vars_t = (string, var_t) Hashtbl.t
 type scope_type_t = Inherit | Function | Initializer
 [@@deriving equal, compare]
 
-type class_type_t = InheritClassType | InsideClass [@@deriving equal, compare]
+type class_type_t = InheritClassType | InsideClass | InsideSubClass
+[@@deriving equal, compare]
 
 type scope_t = {
   vars : vars_t;
@@ -134,7 +135,7 @@ and statement (stmt : Ast.stmt_t) (scope : scope_t) (acc : error_list_t) :
       let acc =
         match declare_var scope name_token.lexeme name_token with
         | Ok _ ->
-            let class_scope, acc =
+            let super_scope, acc =
               match superclass with
               | Some superclass -> (
                   if String.(name_token.lexeme = superclass.token.lexeme) then
@@ -164,7 +165,7 @@ and statement (stmt : Ast.stmt_t) (scope : scope_t) (acc : error_list_t) :
             in
             define_var scope name_token.lexeme;
             let class_scope =
-              create_scope ~parent:(Some class_scope) ~class_type:InsideClass ()
+              create_scope ~parent:(Some super_scope) ~class_type:InsideClass ()
             in
             define_var class_scope "this";
             resolve_methods methods class_scope acc
@@ -242,7 +243,7 @@ and expression (expr : Ast.t) (scope : scope_t) (acc : error_list_t) :
       | Error err -> err :: acc)
   | Ast.This (token, distance) -> (
       match scope.class_type with
-      | InsideClass -> (
+      | InsideClass | InsideSubClass -> (
           match resolve_var scope token.lexeme token with
           | Ok d ->
               distance := d;
@@ -252,12 +253,18 @@ and expression (expr : Ast.t) (scope : scope_t) (acc : error_list_t) :
           { token; message = "Can't use 'this' outside a class." } :: acc)
   | Ast.Super (token, _, distance) -> (
       match scope.class_type with
-      | InsideClass -> (
+      | InsideSubClass -> (
           match resolve_var scope token.lexeme token with
           | Ok d ->
               distance := d;
               acc
           | Error err -> err :: acc)
+      | InsideClass ->
+          {
+            token;
+            message = "Can't use 'super' in a class with no superclass.";
+          }
+          :: acc
       | InheritClassType ->
           { token; message = "Can't use 'super' outside a class." } :: acc)
   | Ast.Unary (_, expr) -> expression expr scope acc
