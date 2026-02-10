@@ -199,7 +199,6 @@ and define_class name_token superclass method_functions env =
     | Some superclass ->
         let closure = create_environment env in
         define_var ~name:"super" ~value:(ClassValue superclass) closure;
-        Stdlib.prerr_endline "created super!";
         closure
     | None -> env
   in
@@ -251,7 +250,29 @@ and expression (ast : Ast.t) (env : environment) : value_t =
       get_var ~token ~distance:!distance env
   | Ast.This (name_token, distance) ->
       get_var ~token:name_token ~distance:!distance env
-  | Ast.Super (token, _, distance) -> get_var ~token ~distance:!distance env
+  | Ast.Super (token, property_token, distance) -> (
+      match get_var ~token ~distance:!distance env with
+      | ClassValue clazz -> (
+          match find_method clazz property_token.lexeme with
+          | Some m ->
+              let this =
+                get_var
+                  ~token:{ token with token_type = Tokens.SUPER }
+                  ~distance:
+                    (Option.map !distance ~f:(fun distance -> distance - 1))
+                  env
+              in
+              let closure = create_environment m.closure in
+              define_var ~name:"this" ~value:this env;
+              FunctionValue { m with closure }
+          | None ->
+              raise
+                (Runtime_exn
+                   { token = property_token; message = "Method not found." }))
+      | _ ->
+          raise
+            (Runtime_exn
+               { token = property_token; message = "super is not a class." }))
 
 and logical left_expr token right_expr env =
   let left = expression left_expr env in
@@ -288,7 +309,6 @@ and binary left_expr token right_expr env =
       raise (Runtime_exn { token; message = "Operands must be numbers" })
 
 and find_method (clazz : class_t) (name : string) : function_t option =
-  Stdlib.Printf.printf "find_method %s::%s" clazz.name_token.lexeme name;
   match (Hashtbl.find clazz.methods name, clazz.superclass) with
   | None, None -> None
   | Some m, _ -> Some m
