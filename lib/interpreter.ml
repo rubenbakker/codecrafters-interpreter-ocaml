@@ -277,11 +277,11 @@ and binary left_expr token right_expr env =
   | _, _, _ ->
       raise (Runtime_exn { token; message = "Operands must be numbers" })
 
-and find_method (clazz : class_t) (name_token : Tokens.t) : function_t option =
-  match (Hashtbl.find clazz.methods name_token.lexeme, clazz.superclass) with
+and find_method (clazz : class_t) (name : string) : function_t option =
+  match (Hashtbl.find clazz.methods name, clazz.superclass) with
   | None, None -> None
   | Some m, _ -> Some m
-  | None, Some clazz -> find_method clazz name_token
+  | None, Some clazz -> find_method clazz name
 
 and get_instance_property instance name_token env : value_t =
   match expression instance env with
@@ -289,7 +289,7 @@ and get_instance_property instance name_token env : value_t =
       match Hashtbl.find instance.ivars name_token.lexeme with
       | Some value -> value
       | None -> (
-          match find_method instance.clazz name_token with
+          match find_method instance.clazz name_token.lexeme with
           | Some m ->
               let closure = create_environment env in
               define_var ~name:"this" ~value:instance_value closure;
@@ -349,7 +349,7 @@ and create_class_instance clazz args token env : value_t =
   let instance =
     InstanceValue { clazz; ivars = Hashtbl.create (module String) }
   in
-  match Hashtbl.find clazz.methods "init" with
+  match find_method clazz "init" with
   | None -> instance
   | Some f ->
       let closure = create_environment env in
