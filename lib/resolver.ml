@@ -134,7 +134,7 @@ and statement (stmt : Ast.stmt_t) (scope : scope_t) (acc : error_list_t) :
       let acc =
         match declare_var scope name_token.lexeme name_token with
         | Ok _ ->
-            let scope, acc =
+            let class_scope, acc =
               match superclass with
               | Some superclass -> (
                   if String.(name_token.lexeme = superclass.token.lexeme) then
@@ -164,7 +164,7 @@ and statement (stmt : Ast.stmt_t) (scope : scope_t) (acc : error_list_t) :
             in
             define_var scope name_token.lexeme;
             let class_scope =
-              create_scope ~parent:(Some scope) ~class_type:InsideClass ()
+              create_scope ~parent:(Some class_scope) ~class_type:InsideClass ()
             in
             define_var class_scope "this";
             resolve_methods methods class_scope acc
