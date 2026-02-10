@@ -288,6 +288,7 @@ and binary left_expr token right_expr env =
       raise (Runtime_exn { token; message = "Operands must be numbers" })
 
 and find_method (clazz : class_t) (name : string) : function_t option =
+  Stdlib.Printf.printf "find_method %s::%s" clazz.name_token.lexeme name;
   match (Hashtbl.find clazz.methods name, clazz.superclass) with
   | None, None -> None
   | Some m, _ -> Some m
